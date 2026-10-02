@@ -1,0 +1,119 @@
+# Cockpit – Meine persönliche Schaltzentrale
+
+## Vision
+Cockpit ist eine Progressive Web App (PWA) nur für mich: Tagesüberblick, Aufgaben, meine eigenen Verträge, Tages- und Wochen-Reviews, eine Lebensbibliothek und mein Markenprofil – alles in einer App auf dem Homescreen. Primäres Zielgerät ist ein **iPad (Safari, als Homescreen-App installiert)**, bedient per Touch und optional mit Hardware-Tastatur. Alle persönlichen Daten liegen **ausschließlich verschlüsselt auf dem Gerät**; die App funktioniert offline, außer Google-Anbindung, optionaler KI und Push-Mitteilungen.
+
+Vorlage ist der Guide „5 Dinge, die du an einem freien Wochenende mit Claude baust“ (gptmarlon.com). Dort laufen die Projekte über Claude + Notion; Cockpit baut sie als eigene App nach – ohne Notion, mit eigener Datenhaltung.
+
+1. **Heute (Dashboard):** Termine von heute (Google Kalender, mit Uhrzeit und Ort), ungelesene Mails der letzten 24 Stunden (Gmail; Absender, Betreff, eine Zeile Zusammenfassung; Mails von echten Personen mit Frage oder Frist oben, Newsletter und Werbung unten), fällige und überfällige Aufgaben, demnächst fällige Verträge/Fristen, Tagesüberblick in drei Sätzen („Was ist heute das Wichtigste, wo wird es zeitlich eng?“). Button „Aktualisieren“.
+2. **Aufgaben:** Titel, Status (offen/erledigt), fällig am, Priorität (hoch/mittel/niedrig).
+3. **Verträge & Dokumente („Zweites Gehirn“):** nur **meine eigenen** Verträge (Mietvertrag, Versicherungen, Handy, Abos …): Name, Kategorie, Anbieter, fällig am (nächster Zahlungs- oder Verlängerungstermin), Kündigungsfrist, Betrag in Euro, Zusammenfassung in höchstens fünf Stichpunkten, Original-PDF oder Foto direkt am Eintrag. Fragen stellen („Wann ist meine Versicherung fällig? Wann kann ich spätestens kündigen?“). Fristen in den iPad-Kalender übernehmen.
+4. **Reviews:** Tages-Review jeden Abend (Was gut lief, Was nicht gut lief, Besser machen – je zwei bis drei konkrete Punkte, dazu „Meine Notiz“) und Wochen-Review am Sonntag (Muster, größte Bremsen, genau drei konkrete Änderungen → landen als Aufgaben, fällig am kommenden Montag).
+5. **Lebensbibliothek:** Bücher, Artikel, Newsletter, YouTube-Videos, Podcasts: Titel, Typ, Autor oder Quelle, Link, konsumiert am, Themen (mehrere), Kernaussagen, meine Gedanken. Später fragen: „Was habe ich zu Thema X gelernt?“ – Antwort mit Quelle. Vergangenes in einem Rutsch als Liste nachtragen.
+6. **Markenprofil & Brand-Kit:** Interview (zehn Fragen, eine nach der anderen) → Markenprofil (Tonalität, Werte, Wörter, die ich nutze und nie nutze, drei Beispielsätze) → Design System (Farbpalette mit Hex-Codes, Schriften für Überschrift und Fließtext, Komponenten). „Damit bauen“: Texte für Newsletter, Landingpage, Instagram-Post oder Videoskript im Ton des Markenprofils.
+7. **Push-Mitteilungen:** Erinnerungen auf dem Homescreen, z. B. morgens „Dein Tag“, 21:30 Uhr „Zeit für deinen Tages-Review“, sonntags 19:00 Uhr „Wochen-Review“.
+
+## Arbeitsumgebung (wichtig)
+- Der Nutzer hat **nur ein iPad**, keinen Rechner. Entwickelt wird ausschließlich in Claude-Code-Cloud-Sitzungen. Der Nutzer kann keine Befehle lokal ausführen und keinen Dev-Server öffnen.
+- Der Nutzer sieht die App nur über das Deployment auf GitHub Pages: https://jannebromann30092026.github.io/Cockpit/ (Deploy automatisch per GitHub Actions bei jedem Push auf main).
+- Deshalb gilt für jeden Schritt: Die App selbst mit Playwright (vorinstalliertes Chromium, kein "playwright install") gegen den Production-Build (vite preview) prüfen und **Screenshots im iPad-Format** (Querformat 1180×820 und Hochformat 820×1180, deviceScaleFactor 2, hasTouch, isMobile) erstellen und dem Nutzer zeigen.
+- Entwicklerwerkzeuge (Komponentenübersicht, Demo-Daten) müssen auch im Production-Build erreichbar sein, versteckt hinter einem Schalter „Entwicklermodus“ in den Einstellungen.
+- Arbeite auf einem Feature-Branch und erstelle am Ende einen Pull Request mit kurzer deutscher Beschreibung, was der Nutzer nach dem Mergen auf dem iPad prüfen soll.
+- Das Repo ist **öffentlich** (GitHub Pages im kostenlosen Plan). Es enthält **nie** echte persönliche Daten, nur Code und erfundene Demo-Daten. Geheimnisse (VAPID-Privatschlüssel, Push-Abo) nur als GitHub-Actions-Secrets.
+- Schwesterprojekte **Kompass** (`JanneBromann30092026/Kompass`) und **Synapse** (`JanneBromann30092026/Synapse-`), beide öffentlich: gleiche Arbeitsweise und Technik. Infrastruktur und Komponenten dürfen von dort kopiert und angepasst werden (Kompass ist die neueste Basis: Tresor, Sperre, Sync, Kalender-Export); die Apps bleiben aber vollständig getrennt (eigenes Repo, eigene Daten, keine gemeinsamen Pakete).
+- **Gleicher Origin** wie Kompass und Synapse (jannebromann30092026.github.io): eigene Namen sind Pflicht – Dexie-DB `cockpit`, localStorage-Präfix `cockpit.`, Workbox-`cacheId` `cockpit`, Service-Worker-Scope `/Cockpit/`.
+
+## Tech-Stack (verbindlich, nicht ohne Rückfrage ändern)
+Gleiche Versionen wie Kompass (dort in package.json nachsehen):
+- Node.js 22 LTS (.nvmrc und "engines")
+- Vite + React 19 mit TypeScript im strict-Modus (kein any, keine ts-ignore ohne Begründungskommentar)
+- vite-plugin-pwa (Workbox) für Manifest, Service Worker, Offline-Fähigkeit und Update-Hinweis; für Push ggf. `injectManifest` statt `generateSW` (Entscheidung in Schritt 8)
+- Tailwind CSS 4 (@tailwindcss/vite), Design-Tokens als CSS-Variablen
+- Motion (Paket "motion", Import aus "motion/react") für Animationen
+- lucide-react für Icons, Inter als Schrift (@fontsource-variable/inter)
+- Zustand für UI-State
+- react-router (HashRouter, Import aus "react-router") für Navigation
+- Dexie.js (IndexedDB) als lokale Datenbank, versioniertes Schema als Migrationen
+- **Web Crypto API** (PBKDF2 + AES-GCM) für die Verschlüsselung – keine Krypto-Bibliotheken von Dritten in der App
+- zod für Validierung
+- @anthropic-ai/sdk direkt im Browser (dangerouslyAllowBrowser: true), **optional** und standardmäßig aus (Standardmodell: claude-haiku-4-5-20251001, konfigurierbar)
+- Google Kalender und Gmail über die Google-REST-APIs direkt aus dem Browser (nur lesend), Anmeldung per OAuth (Ansatz in Schritt 4)
+- Web Push (VAPID); Versand per Node-Skript in GitHub Actions (Bibliothek für den Versand im Skript erlaubt, nicht in der App)
+- Vitest (+ fake-indexeddb) für Unit-Tests, @playwright/test exakt 1.56.1 für Smoke-Tests und Screenshots, ESLint + Prettier
+- Deployment: GitHub Actions → GitHub Pages (Vite base: "/Cockpit/")
+
+## Architekturprinzipien
+- **Alle persönlichen Daten bleiben auf dem Gerät und sind verschlüsselt** – wie in Kompass: App-Passwort beim ersten Start, PBKDF2 (SHA-256, ≥ 600.000 Iterationen, zufälliges Salt) → AES-GCM-256-Schlüssel **nur im Arbeitsspeicher** (nicht extrahierbar). Gespeichert werden nur Salt, Iterationen und ein verschlüsselter Prüfwert.
+- In Dexie nur verschlüsselte `payload` (Ciphertext + IV); unverschlüsselt ausschließlich technische Felder (UUID, Fremdschlüssel-UUID, updatedAt). Suchen, Filtern, Sortieren im Speicher nach dem Entschlüsseln. **PDFs und Fotos** werden ebenfalls verschlüsselt gespeichert (eigene Tabelle für Dateien, Inhalt erst beim Öffnen entschlüsseln).
+- **App-Sperre** wie Kompass: beim Start, nach einstellbarer Inaktivität (Standard 5 Minuten) und nach längerer Zeit im Hintergrund; Schlüssel und Entschlüsseltes werden aus dem Speicher entfernt. Passwort vergessen = Daten verloren (Hinweis im Onboarding, Passwort im iPad-Schlüsselbund speichern, regelmäßig Backup exportieren).
+- Beim Start navigator.storage.persist() anfordern. Regelmäßige Export-Erinnerung (verschlüsselte Backup-Datei).
+- Datenzugriff nur über Repository-Module (src/data/repositories/*); Komponenten greifen nie direkt auf Dexie oder die Krypto-Schicht zu. Schemaänderungen nur über neue Dexie-Versionen mit upgrade-Funktion.
+- API-Key (Anthropic) verschlüsselt in Tabelle "secrets", nie geloggt, nie exportiert, in der UI nie wieder im Klartext („Key hinterlegt“). Google-Zugriffstoken nur im Arbeitsspeicher; die OAuth-Client-ID ist öffentlich und darf im Code stehen, ein Client-Secret nie.
+- **KI ist optional und standardmäßig aus.** Alle Funktionen arbeiten ohne KI (Regeln, Formulare, Textvorlagen). Mit KI wird nur gesendet, was die jeweilige Funktion braucht, und nur auf ausdrücklichen Tipp; vor dem Senden eines Vertrags-PDFs Hinweis „Kontonummern, Ausweis- und Versicherungsnummern vorher schwärzen“. KI erfindet nichts: unsichere Felder bleiben leer und werden als „offener Punkt“ geführt; von der KI formulierte Kernaussagen werden mit „(Claude)“ markiert. KI-Aufrufe gekapselt über src/services/ai/*.
+- Google-Daten (Termine, Mails) werden nur gelesen, nur im Speicher gehalten und nicht dauerhaft gespeichert (höchstens eine verschlüsselte Zwischenablage für offline, Entscheidung in Schritt 4).
+- **Push:** Web Push funktioniert auf dem iPad nur für die Homescreen-App (iPadOS 16.4+) und nach Erlaubnis per Tipp. Der Server kennt keine persönlichen Daten: Mitteilungen sind allgemein („Zeit für deinen Tages-Review“), ein Tipp öffnet die passende Seite. VAPID-Privatschlüssel und Push-Abo liegen nur als GitHub-Secrets (die App zeigt das Abo zum Kopieren). GitHub-Zeitpläne laufen in UTC und oft verspätet (Minuten bis ca. 30 Min.), selten fallen sie aus; Sommer-/Winterzeit im Skript über Europe/Berlin prüfen. Zeitpläne in öffentlichen Repos werden nach 60 Tagen ohne Aktivität deaktiviert → Lösung in Schritt 8. Fristen und Fälligkeiten zusätzlich über Kalender-Export (zuverlässiger als Push).
+- Reine Logik (Fälligkeiten, Kündigungsfristen, Mail-Einordnung, Tagesüberblick ohne KI, Review-Auswertung, Bibliothek-Suche, Krypto-Formate) liegt in framework-unabhängigen Modulen unter src/core/ und ist mit Vitest getestet.
+- Content-Security-Policy per meta-Tag, so restriktiv wie möglich; externe Verbindungen nur zu Google (OAuth, Kalender, Gmail) und api.anthropic.com (optionale KI), jeweils erst mit dem Schritt, der sie braucht.
+
+## Fachliche Regeln
+- Nur Fakten speichern, die ich nenne oder die im Dokument stehen; Unbekanntes bleibt leer und wird als „offener Punkt“ geführt.
+- Keine Kontonummern/IBAN, Ausweis- oder Steuer-ID als eigene Felder.
+- Kündigungsfrist: Text aus dem Vertrag plus, wenn berechenbar, „spätestens kündigen bis“. Fristen und Beträge immer mit Hinweis „im Original-PDF prüfen“; steuerliche/rechtliche Hinweise immer als „prüfen“, nie als Beratung.
+- Mail-Einordnung ohne KI über Header und Gmail-Kategorien (z. B. List-Unsubscribe, Werbung/Updates); mit KI optional verfeinert.
+- Reviews beziehen sich nur auf echte Daten (Kalender, Aufgaben, meine Notiz); offene Aufgaben werden nicht verschoben, sondern unter „Besser machen“ gelistet.
+
+## Ordnerstruktur (Zielbild)
+src/core/            – reine Logik ohne React/Browser-APIs (tasks, documents, reviews, library, brand, today, mail, crypto-Formate)
+src/data/            – Dexie-Datenbank, Schema/Migrationen, Repositories, Typen, Stammdaten (Kategorien, Typen, Interviewfragen, Vorlagen)
+src/services/        – Krypto/Tresor, Google, KI-Provider, Push, Backup/Export
+src/app/             – App-Root, Router, Shell, Sperrbildschirm
+src/components/ui/   – Design-System-Komponenten
+src/features/        – today, tasks, documents, reviews, library, brand, settings, transfer, dev
+src/styles/          – Tokens, globale Styles, motion.ts
+src/i18n/de.ts       – alle UI-Texte zentral (Deutsch)
+scripts/             – Icons, Push-Versand (GitHub Actions)
+e2e/                 – Playwright-Tests und Screenshot-Skript
+
+## Design-Leitlinien
+Gleiche Designsprache wie Kompass und Synapse – schlicht, modern, ruhig, große Radien, Pill-Buttons, viel Weißraum, Inter, weiche Schatten, feine Ränder, kurze federnde Spring-Animationen, gezielte Effekte an Schlüsselmomenten (Entsperren, Aufgabe erledigt, Review abgeschlossen). Dark und Light Mode, Standard folgt dem System. prefers-reduced-motion wird respektiert.
+
+**Eigene Identität (klar unterscheidbar von Kompass und Synapse):**
+- Akzentfarbe **Kobaltblau** statt Petrol (Kompass) und Violett (Synapse); ergänzender Akzent **Signalgelb** für Hervorhebungen (angelehnt an die gelben Markierungen im Guide). Status-Farben Grün/Rot-Orange klar getrennt. Alle Textfarben ≥ 4,5:1; genaue Werte in Schritt 1.
+- App-Icon: abgerundetes Quadrat mit dunklem Blau-Verlauf und geometrischem **Rundinstrument** (Skala mit Nadel, Nadel in Signalgelb). Startbildschirm im selben Stil.
+- Name überall „Cockpit“ (Manifest name und short_name).
+
+Touch-first (iPad), wie Kompass:
+- Tippflächen mindestens 44×44 px. Nichts nur per Hover; Hover-Effekte nur unter @media (hover: hover).
+- Safe Areas, Höhen mit dvh, kein ungewolltes Scrollen/Bounce.
+- Bildschirmtastatur: aktives Feld bleibt sichtbar (visualViewport).
+- Gesten immer mit sichtbarer Button-Alternative. Tastaturkürzel für Hardware-Tastaturen.
+- Hoch- und Querformat, Split View (ab ca. 500 px Breite).
+
+## Konventionen
+- UI-Sprache Deutsch (du-Form, freundlich, knapp), Code/Variablen/Kommentare Englisch.
+- Keine hartkodierten UI-Texte in Komponenten – alles aus src/i18n/de.ts. Fachliche Vorlagen (Interviewfragen, Prompt-Vorlagen, Kategorien) liegen als Daten in src/data.
+- IDs sind UUIDs (crypto.randomUUID), Zeitstempel als ISO-Strings in UTC; Kalenderdaten als „JJJJ-MM-TT“ in lokaler Zeit.
+- Jeder Schritt endet mit: npm run typecheck, npm run lint, npm run test und npm run build ohne Fehler, plus Playwright-Screenshots.
+- Google und KI in Tests immer per `page.route` mocken (inkl. OPTIONS-Preflight); nie echte Konten oder Keys in Tests.
+- Implementiere immer nur den aktuell beauftragten Schritt. Baue keine Features künftiger Schritte vor, verbaue sie aber auch nicht.
+- Nach Abschluss eines Schritts: Roadmap unten abhaken und unter „Entscheidungen & Notizen“ wichtige Abweichungen oder Erkenntnisse kurz dokumentieren.
+
+## Roadmap
+- [x] 0 Projektkontext (CLAUDE.md)
+- [ ] 1 Fundament: Setup, PWA, Deployment, Design-System & Shell (aus Kompass)
+- [ ] 2 Datenbank, Verschlüsselung & App-Sperre (aus Kompass)
+- [ ] 3 Einstellungen & optionale KI (Grundlage: Key, Modell, Test)
+- [ ] 4 Google-Anbindung & „Heute“ (Kalender, Gmail; Anmeldung auf dem iPad zuerst prüfen)
+- [ ] 5 Aufgaben (inkl. Anzeige in „Heute“)
+- [ ] 6 Verträge & Dokumente (PDF/Foto, Fristen, Kalender-Export, Fragen, KI-Auslesen)
+- [ ] 7 Reviews (Tag & Woche, Änderungen als Aufgaben, KI-Auswertung)
+- [ ] 8 Push-Mitteilungen (GitHub Actions)
+- [ ] 9 Lebensbibliothek (Einträge, Nachtragen, Suche, Fragen mit Quelle)
+- [ ] 10 Markenprofil & Brand-Kit (Interview, Design System, „Damit bauen“)
+- [ ] 11 Backups, Export & Import
+- [ ] 12 Feinschliff & Installation
+
+## Entscheidungen & Notizen
+- Entstehung: Guide „5 Dinge, die du an einem freien Wochenende mit Claude baust“ (gptmarlon.com). Statt Claude + Notion eine eigene PWA, weil alles in einer App auf dem Homescreen liegen soll, mit Push-Mitteilungen. Notion entfällt (Notion-API erlaubt keinen direkten Zugriff aus dem Browser). Geplante Aufgaben aus dem Guide (Morgen-Briefing, Tages-/Wochen-Review) werden zu Push-Erinnerungen + Auswertung beim Öffnen, weil Web-Apps auf dem iPad nicht im Hintergrund laufen.
+- Entscheidungen vor dem Start: Name „Cockpit“; KI optional (eigener API-Key, separat abgerechnet); Google Kalender und Gmail von Anfang an (Schritt 4); Push per GitHub Actions (kostenlos, Zeiten ungenau).
+- Getrennt von Kompass: keine gemeinsamen Daten oder Pakete; Kompass dient nur als Vorlage für Code.
