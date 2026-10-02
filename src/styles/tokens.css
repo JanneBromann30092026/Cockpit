@@ -1,0 +1,222 @@
+/*
+ * Design tokens. Themes via data-theme on <html> (set before the first render in main.tsx).
+ * Without data-theme the system preference applies (media query fallback below).
+ * Keep the dark values in both dark blocks identical.
+ *
+ * Identity: cobalt blue accent, signal yellow as second accent for highlights (like the
+ * yellow markers of the guide). Success is green and warning a red-leaning orange, so
+ * neither can be mistaken for the accent or the yellow. Text colors (accent, signal-fg,
+ * success, warning, danger, fg-muted) reach WCAG AA (4.5:1) on --bg and --surface in both
+ * themes; --on-* is the text on fills.
+ */
+
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: #e8ecf3;
+  --border: rgba(12, 22, 48, 0.09);
+  --border-strong: rgba(12, 22, 48, 0.16);
+  --fg: #0d1321;
+  --fg-secondary: #4a5467;
+  --fg-muted: #5b6578;
+  --overlay: rgba(8, 14, 32, 0.3);
+
+  --accent: #1d4ed8;
+  --accent-strong: #1a40b0;
+  --accent-soft: rgba(29, 78, 216, 0.11);
+  --accent-glow: rgba(29, 78, 216, 0.32);
+  --on-accent: #ffffff;
+  --signal: #f5c400;
+  --on-signal: #1f1800;
+  --signal-fg: #7a5800;
+  --signal-soft: rgba(245, 196, 0, 0.2);
+  --signal-glow: rgba(245, 196, 0, 0.42);
+  --success: #15803d;
+  --success-soft: rgba(21, 128, 61, 0.12);
+  --success-glow: rgba(21, 128, 61, 0.35);
+  --on-success: #ffffff;
+  --danger: #be123c;
+  --danger-soft: rgba(190, 18, 60, 0.1);
+  --danger-glow: rgba(190, 18, 60, 0.32);
+  --on-danger: #ffffff;
+  --warning: #c2410c;
+  --warning-soft: rgba(194, 65, 12, 0.11);
+  --warning-glow: rgba(194, 65, 12, 0.32);
+  --on-warning: #ffffff;
+
+  --shadow-color: rgba(8, 14, 32, 0.12);
+  --highlight: transparent;
+  --shimmer: rgba(255, 255, 255, 0.55);
+  --bg-shape-opacity: 0.1;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #090d16;
+  --surface: #0f1522;
+  --surface-raised: #141c2d;
+  --surface-sunken: #0b111c;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.13);
+  --fg: #e6ebf5;
+  --fg-secondary: #9ba5b8;
+  --fg-muted: #808b9f;
+  --overlay: rgba(0, 0, 0, 0.5);
+
+  --accent: #6b93ff;
+  --accent-strong: #8eacff;
+  --accent-soft: rgba(107, 147, 255, 0.15);
+  --accent-glow: rgba(107, 147, 255, 0.4);
+  --on-accent: #050b1f;
+  --signal: #ffd23f;
+  --on-signal: #1f1800;
+  --signal-fg: #ffd23f;
+  --signal-soft: rgba(255, 210, 63, 0.15);
+  --signal-glow: rgba(255, 210, 63, 0.4);
+  --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, 0.14);
+  --success-glow: rgba(74, 222, 128, 0.35);
+  --on-success: #052e16;
+  --danger: #fb7185;
+  --danger-soft: rgba(251, 113, 133, 0.14);
+  --danger-glow: rgba(251, 113, 133, 0.35);
+  --on-danger: #2a0610;
+  --warning: #fb923c;
+  --warning-soft: rgba(251, 146, 60, 0.14);
+  --warning-glow: rgba(251, 146, 60, 0.35);
+  --on-warning: #2a1103;
+
+  --shadow-color: rgba(0, 0, 0, 0.45);
+  --highlight: rgba(255, 255, 255, 0.05);
+  --shimmer: rgba(255, 255, 255, 0.06);
+  --bg-shape-opacity: 0.14;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --bg: #090d16;
+    --surface: #0f1522;
+    --surface-raised: #141c2d;
+    --surface-sunken: #0b111c;
+    --border: rgba(255, 255, 255, 0.07);
+    --border-strong: rgba(255, 255, 255, 0.13);
+    --fg: #e6ebf5;
+    --fg-secondary: #9ba5b8;
+    --fg-muted: #808b9f;
+    --overlay: rgba(0, 0, 0, 0.5);
+
+    --accent: #6b93ff;
+    --accent-strong: #8eacff;
+    --accent-soft: rgba(107, 147, 255, 0.15);
+    --accent-glow: rgba(107, 147, 255, 0.4);
+    --on-accent: #050b1f;
+    --signal: #ffd23f;
+    --on-signal: #1f1800;
+    --signal-fg: #ffd23f;
+    --signal-soft: rgba(255, 210, 63, 0.15);
+    --signal-glow: rgba(255, 210, 63, 0.4);
+    --success: #4ade80;
+    --success-soft: rgba(74, 222, 128, 0.14);
+    --success-glow: rgba(74, 222, 128, 0.35);
+    --on-success: #052e16;
+    --danger: #fb7185;
+    --danger-soft: rgba(251, 113, 133, 0.14);
+    --danger-glow: rgba(251, 113, 133, 0.35);
+    --on-danger: #2a0610;
+    --warning: #fb923c;
+    --warning-soft: rgba(251, 146, 60, 0.14);
+    --warning-glow: rgba(251, 146, 60, 0.35);
+    --on-warning: #2a1103;
+
+    --shadow-color: rgba(0, 0, 0, 0.45);
+    --highlight: rgba(255, 255, 255, 0.05);
+    --shimmer: rgba(255, 255, 255, 0.06);
+    --bg-shape-opacity: 0.14;
+  }
+}
+
+/* Cobalt tones of the app icon (illustrations, background shapes). */
+:root {
+  --cobalt-deep: #0a1640;
+  --cobalt: #173a9e;
+  --cobalt-light: #4f7dff;
+}
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-secondary: var(--fg-secondary);
+  --color-fg-muted: var(--fg-muted);
+  --color-overlay: var(--overlay);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-glow: var(--accent-glow);
+  --color-on-accent: var(--on-accent);
+  --color-signal: var(--signal);
+  --color-on-signal: var(--on-signal);
+  --color-signal-fg: var(--signal-fg);
+  --color-signal-soft: var(--signal-soft);
+  --color-signal-glow: var(--signal-glow);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-glow: var(--success-glow);
+  --color-on-success: var(--on-success);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-glow: var(--danger-glow);
+  --color-on-danger: var(--on-danger);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-glow: var(--warning-glow);
+  --color-on-warning: var(--on-warning);
+  --color-cobalt-deep: var(--cobalt-deep);
+  --color-cobalt: var(--cobalt);
+  --color-cobalt-light: var(--cobalt-light);
+
+  --shadow-soft: 0 1px 2px var(--shadow-color), inset 0 1px 0 var(--highlight);
+  --shadow-card: 0 10px 30px -14px var(--shadow-color), inset 0 1px 0 var(--highlight);
+  --shadow-float: 0 24px 60px -20px var(--shadow-color), inset 0 1px 0 var(--highlight);
+}
+
+@theme {
+  --font-sans: 'Inter Variable', system-ui, sans-serif;
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 14px;
+  --text-sm--line-height: 20px;
+  --text-base: 16px;
+  --text-base--line-height: 24px;
+  --text-lg: 18px;
+  --text-lg--line-height: 26px;
+  --text-xl: 22px;
+  --text-xl--line-height: 28px;
+  --text-2xl: 28px;
+  --text-2xl--line-height: 34px;
+  --text-3xl: 36px;
+  --text-3xl--line-height: 42px;
+  --text-4xl: 48px;
+  --text-4xl--line-height: 54px;
+
+  /* rem like the default breakpoints, so "wide:" sorts after "sm:" (900 px). */
+  --breakpoint-wide: 56.25rem;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
