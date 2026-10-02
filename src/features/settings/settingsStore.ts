@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { create } from 'zustand';
+import { DEFAULT_LOCK_AFTER_MINUTES, LOCK_AFTER_MINUTES } from '@/core/lock';
 import { settingsRepo } from '@/data/repositories';
 
 export const THEME_PREFERENCES = ['system', 'light', 'dark'] as const;
@@ -17,6 +18,8 @@ const schemas = {
   theme: z.enum(THEME_PREFERENCES),
   reduceMotion: z.boolean(),
   sidebarCollapsed: z.boolean(),
+  // Security (needed before unlocking, therefore a plain setting)
+  lockAfterMinutes: z.literal(LOCK_AFTER_MINUTES),
   // Developer
   devMode: z.boolean(),
 };
@@ -28,6 +31,7 @@ export const SETTINGS_DEFAULTS: SettingsValues = {
   theme: 'system',
   reduceMotion: false,
   sidebarCollapsed: false,
+  lockAfterMinutes: DEFAULT_LOCK_AFTER_MINUTES,
   devMode: false,
 };
 

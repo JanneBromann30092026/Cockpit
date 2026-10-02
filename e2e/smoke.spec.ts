@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { enableDevMode, nav, openApp, reloadAndUnlock, unlock } from './vault.ts';
 
 function collectConsoleProblems(page: Page): string[] {
   const problems: string[] = [];
@@ -11,19 +12,9 @@ function collectConsoleProblems(page: Page): string[] {
   return problems;
 }
 
-async function enableDevMode(page: Page) {
-  await page.goto('./#/settings');
-  const toggle = page.getByRole('switch', { name: 'Entwicklermodus' });
-  await expect(toggle).toBeVisible();
-  if ((await toggle.getAttribute('aria-checked')) !== 'true') await toggle.click();
-  await expect(toggle).toHaveAttribute('aria-checked', 'true');
-}
-
-const nav = (page: Page) => page.getByRole('navigation', { name: 'Hauptnavigation' });
-
 test('app shell loads without console errors or warnings', async ({ page }) => {
   const problems = collectConsoleProblems(page);
-  await page.goto('./');
+  await openApp(page);
 
   await expect(page).toHaveURL(/#\/today$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Heute' })).toBeVisible();
@@ -36,7 +27,7 @@ test('app shell loads without console errors or warnings', async ({ page }) => {
 });
 
 test('sidebar from 900 px, tab bar below', async ({ page }, testInfo) => {
-  await page.goto('./');
+  await openApp(page);
   const wide = testInfo.project.name === 'ipad-landscape';
   await expect(page.locator('[data-layout]')).toHaveAttribute(
     'data-layout',
@@ -47,14 +38,14 @@ test('sidebar from 900 px, tab bar below', async ({ page }, testInfo) => {
   // The sidebar collapses and stays collapsed after a reload.
   await page.getByRole('button', { name: 'Seitenleiste einklappen' }).click();
   await expect(page.getByRole('button', { name: 'Seitenleiste ausklappen' })).toBeVisible();
-  await page.reload();
+  await reloadAndUnlock(page);
   await expect(page.getByRole('button', { name: 'Seitenleiste ausklappen' })).toBeVisible();
   await page.getByRole('button', { name: 'Seitenleiste ausklappen' }).click();
 });
 
 test('navigation switches pages', async ({ page }) => {
   const problems = collectConsoleProblems(page);
-  await page.goto('./');
+  await openApp(page);
   const pages = [
     ['Aufgaben', 'Kommt in Schritt 5'],
     ['Verträge', 'Kommt in Schritt 6'],
@@ -77,7 +68,7 @@ test('navigation switches pages', async ({ page }) => {
 });
 
 test('number keys open the sections (hardware keyboard)', async ({ page }) => {
-  await page.goto('./');
+  await openApp(page);
   await expect(page.getByRole('heading', { level: 1, name: 'Heute' })).toBeVisible();
   const sections = [
     ['2', 'Aufgaben'],
@@ -111,7 +102,7 @@ test('requests persistent storage at startup and shows the system status', async
       },
     });
   });
-  await page.goto('./#/settings');
+  await openApp(page, '/settings');
   await expect(page.getByTestId('app-version')).toHaveText('0.1.0');
   await expect(page.getByTestId('build-time')).not.toBeEmpty();
   await expect(page.getByTestId('database-status')).toHaveText('Bereit');
@@ -124,7 +115,7 @@ test('requests persistent storage at startup and shows the system status', async
 });
 
 test('theme choice is applied and survives a reload', async ({ page }) => {
-  await page.goto('./#/settings');
+  await openApp(page, '/settings');
   const html = page.locator('html');
   await page.getByRole('radio', { name: 'Hell' }).click();
   await expect(html).toHaveAttribute('data-theme', 'light');
@@ -141,7 +132,10 @@ test('theme choice is applied and survives a reload', async ({ page }) => {
   await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toBeVisible();
 
   await page.reload();
+  // The theme applies before unlocking (settings are not encrypted).
+  await expect(page.getByTestId('lock-screen')).toBeVisible();
   await expect(html).toHaveAttribute('data-theme', 'dark');
+  await unlock(page);
   await expect(page.getByRole('radio', { name: 'Dunkel' })).toHaveAttribute('aria-checked', 'true');
 
   // Own storage names: no collision with Kompass and Synapse on the same origin.
@@ -155,25 +149,25 @@ test('theme choice is applied and survives a reload', async ({ page }) => {
 });
 
 test('reduced motion is applied and survives a reload', async ({ page }) => {
-  await page.goto('./#/settings');
+  await openApp(page, '/settings');
   const toggle = page.getByRole('switch', { name: 'Bewegungen reduzieren' });
   await toggle.click();
   await expect(page.locator('html')).toHaveAttribute('data-reduce-motion', '');
-  await page.reload();
+  await reloadAndUnlock(page);
   await expect(page.locator('html')).toHaveAttribute('data-reduce-motion', '');
   await expect(toggle).toHaveAttribute('aria-checked', 'true');
 });
 
 test('developer mode shows the component overview and the focus mode', async ({ page }) => {
   const problems = collectConsoleProblems(page);
-  await page.goto('./#/dev/ui');
+  await openApp(page, '/dev/ui');
   await expect(page.getByText('Entwicklermodus ist aus')).toBeVisible();
 
   await enableDevMode(page);
   await nav(page).getByRole('link', { name: 'Entwickler' }).click();
   await expect(page).toHaveURL(/#\/dev\/ui$/);
   await expect(page.getByTestId('dev-section-buttons')).toBeVisible();
-  await page.reload();
+  await reloadAndUnlock(page);
   await expect(nav(page).getByRole('link', { name: 'Entwickler' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Modal öffnen' }).click();
@@ -196,7 +190,7 @@ test('developer mode shows the component overview and the focus mode', async ({ 
 });
 
 test('keyboard shortcut overview opens with ?', async ({ page }) => {
-  await page.goto('./');
+  await openApp(page);
   await expect(page.getByRole('heading', { level: 1, name: 'Heute' })).toBeVisible();
   await page.keyboard.press('Shift+?');
   await expect(page.getByRole('dialog', { name: 'Tastaturkürzel' })).toBeVisible();
@@ -237,12 +231,12 @@ test('manifest is linked and valid', async ({ page, request }) => {
 
 test('app works offline after the service worker is installed', async ({ page, context }) => {
   const problems = collectConsoleProblems(page);
-  await page.goto('./');
+  await openApp(page);
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
   });
   // Wait until the service worker controls the page (precache complete).
-  await page.reload();
+  await reloadAndUnlock(page);
   await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
 
   // Own service worker scope and cache names (Kompass and Synapse share the origin).
@@ -255,7 +249,8 @@ test('app works offline after the service worker is installed', async ({ page, c
   expect(sw.caches.filter((name) => !name.startsWith('cockpit-'))).toEqual([]);
 
   await context.setOffline(true);
-  await page.reload();
+  // Unlocking works offline: the key is derived on the device.
+  await reloadAndUnlock(page);
   await expect(page.getByRole('heading', { level: 1, name: 'Heute' })).toBeVisible();
   await nav(page).getByRole('link', { name: 'Aufgaben' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Aufgaben' })).toBeVisible();

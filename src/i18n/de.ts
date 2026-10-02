@@ -11,6 +11,7 @@ const nav = {
   dev: 'Entwickler',
   collapse: 'Seitenleiste einklappen',
   expand: 'Seitenleiste ausklappen',
+  lock: 'Sperren',
 } as const;
 
 /** All user-facing texts (German). Components must not hard-code UI strings. */
@@ -20,6 +21,50 @@ export const de = {
     tagline: 'Deine persönliche Schaltzentrale.',
   },
   nav,
+  lock: {
+    setupTitle: 'Willkommen bei Cockpit',
+    setupText:
+      'Lege ein App-Passwort fest. Damit werden alle deine Daten auf diesem iPad verschlüsselt.',
+    unlockTitle: 'Cockpit ist gesperrt',
+    unlockText: 'Gib dein App-Passwort ein – oder nutze Face ID über den Schlüsselbund.',
+    username: 'Cockpit',
+    password: 'App-Passwort',
+    passwordRepeat: 'Passwort wiederholen',
+    passwordHint: (min: number) =>
+      `Mindestens ${min} Zeichen. Ein Satz aus mehreren Wörtern ist gut.`,
+    strength: 'Stärke',
+    strengthLabels: ['zu kurz', 'schwach', 'mittel', 'gut', 'stark'],
+    warningTitle: 'Passwort vergessen = Daten verloren',
+    warningText:
+      'Niemand kann das Passwort zurücksetzen oder die Daten wiederherstellen. Lass Safari das Passwort im Schlüsselbund sichern – dann entsperrst du später per Face ID – und exportiere regelmäßig ein Backup.',
+    acknowledge: 'Verstanden: Ohne Passwort sind die Daten verloren.',
+    setupSubmit: 'Cockpit einrichten',
+    unlockSubmit: 'Entsperren',
+    working: 'Wird geprüft …',
+    errors: {
+      tooShort: (min: number) => `Das Passwort braucht mindestens ${min} Zeichen.`,
+      mismatch: 'Die Passwörter stimmen nicht überein.',
+      acknowledge: 'Bitte bestätige den Hinweis.',
+      wrong: 'Das Passwort stimmt nicht.',
+      wait: (seconds: number) => `Zu viele Versuche – bitte warte ${seconds} s.`,
+      failed: 'Das hat nicht geklappt. Bitte versuche es noch einmal.',
+    },
+    reasons: {
+      manual: 'Gesperrt.',
+      inactivity: 'Automatisch gesperrt, weil eine Weile nichts passiert ist.',
+      background: 'Gesperrt, weil Cockpit im Hintergrund war.',
+      keyChanged: 'Das Passwort wurde in einem anderen Fenster geändert. Bitte neu entsperren.',
+    },
+    forgot: 'Passwort vergessen?',
+    forgotTitle: 'Passwort vergessen?',
+    forgotText:
+      'Ohne Passwort lassen sich die Daten nicht entschlüsseln – auch nicht vom Entwickler. Du kannst nur alles löschen und neu beginnen. Ein exportiertes Backup kannst du danach mit seinem damaligen Passwort wieder einspielen.',
+    resetConfirmLabel: 'Zum Bestätigen LÖSCHEN eingeben',
+    resetConfirmWord: 'LÖSCHEN',
+    resetSubmit: 'Alles löschen',
+    devHint: (password: string) => `Entwicklermodus · Testpasswort: ${password}`,
+    unavailable: 'Cockpit kann nicht starten',
+  },
   comingSoon: {
     badge: (step: number) => `Kommt in Schritt ${step}`,
     pages: {
@@ -62,10 +107,44 @@ export const de = {
       persistedHint:
         'Ohne dauerhaften Speicher darf iPadOS die Daten bei Platzmangel löschen. Installiere Cockpit als Homescreen-App und öffne es immer darüber.',
     },
+    security: {
+      title: 'Sicherheit',
+      lockNow: 'Jetzt sperren',
+      lockNowLabel: 'App sperren',
+      lockAfter: 'Automatisch sperren nach',
+      lockAfterOption: (minutes: number) => (minutes === 1 ? '1 Minute' : `${minutes} Minuten`),
+      lockAfterHint: 'Nach mehr als 1 Minute im Hintergrund sperrt Cockpit immer.',
+      password: 'App-Passwort',
+      changePassword: 'Passwort ändern',
+      encryption: 'Verschlüsselung',
+      encryptionValue: (iterations: number) =>
+        `AES-GCM 256 · PBKDF2-SHA-256 · ${new Intl.NumberFormat('de-DE').format(iterations)} Iterationen`,
+      lastDerivation: 'Letzte Schlüsselableitung',
+      lastDerivationValue: (ms: number) => `${ms} ms`,
+    },
+    changePassword: {
+      title: 'Passwort ändern',
+      text: 'Alle Daten werden mit dem neuen Passwort neu verschlüsselt. Danach gilt nur noch das neue Passwort – aktualisiere es auch im Schlüsselbund.',
+      current: 'Aktuelles Passwort',
+      next: 'Neues Passwort',
+      repeat: 'Neues Passwort wiederholen',
+      submit: 'Passwort ändern',
+      wrongCurrent: 'Das aktuelle Passwort stimmt nicht.',
+      done: 'Passwort geändert – alle Daten sind neu verschlüsselt.',
+    },
     about: 'Über Cockpit',
     developer: 'Entwickler',
     devMode: 'Entwicklermodus',
-    devModeHint: 'Zeigt in der Navigation den Bereich „Entwickler“ mit der Komponentenübersicht.',
+    devModeHint:
+      'Zeigt in der Navigation den Bereich „Entwickler“ mit Testwerkzeugen und Komponentenübersicht.',
+    testPassword: (password: string) =>
+      `E2E-Tests und Screenshots nutzen das Testpasswort „${password}“ – nie für echte Daten verwenden.`,
+    resetDatabase: 'Datenbank zurücksetzen',
+    resetDatabaseHint: 'Löscht Passwort, alle Daten und Einstellungen auf diesem Gerät.',
+    resetTitle: 'Datenbank zurücksetzen?',
+    resetText:
+      'Passwort, alle Daten und Einstellungen werden auf diesem Gerät gelöscht. Das lässt sich nicht rückgängig machen.',
+    resetConfirm: 'Alles löschen',
   },
   system: {
     version: 'App-Version',
@@ -87,6 +166,38 @@ export const de = {
   },
   dev: {
     title: 'Entwickler',
+    vault: {
+      title: 'Verschlüsselung testen',
+      hint: 'Legt erfundene Testaufgaben an, um Verschlüsselung und Abgleich zu prüfen. Die Aufgabenliste folgt in Schritt 5.',
+      tables: {
+        tasks: 'Aufgaben',
+        documents: 'Verträge',
+        reviews: 'Reviews',
+        library: 'Bibliothek',
+        brand: 'Marke',
+      },
+      create: 'Testaufgabe anlegen',
+      update: 'Letzte ändern',
+      remove: 'Letzte löschen',
+      created: (title: string) => `„${title}“ angelegt`,
+      updated: (title: string) => `„${title}“ geändert`,
+      removed: (title: string) => `„${title}“ gelöscht`,
+      decrypted: 'Entschlüsselt im Speicher',
+      stored: 'So liegt die neueste Aufgabe in IndexedDB',
+      iv: 'IV',
+      ciphertext: 'Ciphertext',
+      bytes: (n: number) => `${n} Bytes`,
+      empty: 'Noch keine Testaufgaben.',
+      priorities: { high: 'hoch', medium: 'mittel', low: 'niedrig' },
+      testTitles: [
+        'Steuererklärung abschicken',
+        'Hausratversicherung vergleichen',
+        'Zahnarzttermin vereinbaren',
+        'Videoskript fürs Wochenende schreiben',
+        'Lernzettel Statistik',
+        'Handyvertrag prüfen',
+      ],
+    },
     disabledTitle: 'Entwicklermodus ist aus',
     disabledText: 'Aktiviere ihn in den Einstellungen, um diesen Bereich zu sehen.',
     openSettings: 'Zu den Einstellungen',
@@ -204,6 +315,8 @@ export const de = {
     loading: 'Wird geladen …',
     moreActions: 'Weitere Aktionen',
     dismiss: 'Hinweis schließen',
+    showPassword: 'Passwort anzeigen',
+    hidePassword: 'Passwort verbergen',
   },
   errors: {
     title: 'Da ist etwas schiefgelaufen',

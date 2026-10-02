@@ -1,18 +1,44 @@
 import { Dexie } from 'dexie';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { classifyOpenError, CockpitDb, db, DB_NAME, openDatabase } from '../db';
+import { classifyOpenError, CockpitDb, DATA_TABLES, db, DB_NAME, openDatabase } from '../db';
 import { settingsRepo } from '../repositories';
 import { resetDb } from './testDb';
 
 describe('database schema', () => {
-  it('opens version 1 under its own name with the settings table', async () => {
+  it('opens version 2 under its own name with all tables', async () => {
     expect(await openDatabase()).toEqual({ ok: true });
     expect(db.name).toBe(DB_NAME);
     expect(DB_NAME).toBe('cockpit');
-    expect(db.verno).toBe(1);
-    expect(db.tables.map((table) => table.name)).toEqual(['settings']);
+    expect(db.verno).toBe(2);
+    expect(db.tables.map((table) => table.name).sort()).toEqual(
+      ['brand', 'documents', 'library', 'meta', 'reviews', 'secrets', 'settings', 'tasks'].sort(),
+    );
     expect(db.settings.schema.primKey.name).toBe('key');
+  });
+
+  it('indexes only technical fields of the encrypted tables', () => {
+    for (const table of DATA_TABLES) {
+      expect(db.table(table).schema.primKey.name).toBe('id');
+      expect(db.table(table).schema.indexes.map((index) => index.name)).toEqual(['updatedAt']);
+    }
+    expect(db.secrets.schema.indexes).toEqual([]);
+  });
+
+  it('upgrades a step-1 database (settings only) and keeps its settings', async () => {
+    const name = 'cockpit-upgrade-test';
+    const v1 = new Dexie(name);
+    v1.version(1).stores({ settings: 'key' });
+    await v1.open();
+    await v1.table('settings').put({ key: 'theme', value: 'dark' });
+    v1.close();
+    const upgraded = new CockpitDb(name);
+    expect(await openDatabase(upgraded)).toEqual({ ok: true });
+    expect(upgraded.verno).toBe(2);
+    expect(await upgraded.settings.get('theme')).toEqual({ key: 'theme', value: 'dark' });
+    expect(await upgraded.tasks.count()).toBe(0);
+    upgraded.close();
+    await Dexie.delete(name);
   });
 });
 
