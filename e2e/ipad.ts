@@ -24,3 +24,6 @@ export const IPAD_PORTRAIT = {
   ...IPAD_BASE,
   viewport: { width: 820, height: 1180 },
 } satisfies BrowserContextOptions;
+
+/** Password of the E2E tests and screenshots (= E2E_TEST_PASSWORD in src/core/devConstants.ts). */
+export const TEST_PASSWORD = 'Cockpit-Test-2026!';

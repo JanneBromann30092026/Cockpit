@@ -5,7 +5,7 @@
 import { mkdirSync } from 'node:fs';
 import { chromium, type BrowserContextOptions, type Page } from '@playwright/test';
 import { preview } from 'vite';
-import { IPAD_LANDSCAPE, IPAD_PORTRAIT, PREVIEW_URL } from './ipad.ts';
+import { IPAD_LANDSCAPE, IPAD_PORTRAIT, PREVIEW_URL, TEST_PASSWORD } from './ipad.ts';
 
 interface Shot {
   /** Hash route, e.g. "/tasks". */
@@ -17,6 +17,163 @@ interface Shot {
   scroll?: boolean;
   /** Only in the wide layout (sidebar). */
   wideOnly?: boolean;
+}
+
+/** Unlocks after a reload (every reload locks the app). */
+async function unlockIfLocked(page: Page) {
+  const field = page.getByTestId('unlock-password');
+  if (!(await field.isVisible())) return;
+  await field.fill(TEST_PASSWORD);
+  await page.getByTestId('unlock-submit').click();
+  await page.getByTestId('lock-screen').waitFor({ state: 'detached' });
+}
+
+/** Height of the iPad on-screen keyboard per orientation (approx., without the shortcut bar). */
+const KEYBOARD_HEIGHT = { landscape: 400, portrait: 330 };
+
+/**
+ * Chromium has no on-screen keyboard: a fake visualViewport lets the app lay out as with the
+ * iPad keyboard (height via window.__setKeyboard), a grey block shows where the keyboard sits.
+ */
+function simulatedKeyboardScript() {
+  const events = new EventTarget();
+  let keyboard = 0;
+  const viewport = {
+    get width() {
+      return window.innerWidth;
+    },
+    get height() {
+      return window.innerHeight - keyboard;
+    },
+    offsetTop: 0,
+    offsetLeft: 0,
+    pageTop: 0,
+    pageLeft: 0,
+    scale: 1,
+    addEventListener: events.addEventListener.bind(events),
+    removeEventListener: events.removeEventListener.bind(events),
+  };
+  Object.defineProperty(window, 'visualViewport', { get: () => viewport });
+  Object.assign(window, {
+    __setKeyboard: (height: number) => {
+      keyboard = height;
+      events.dispatchEvent(new Event('resize'));
+      document.getElementById('e2e-keyboard')?.remove();
+      if (!height) return;
+      const block = document.createElement('div');
+      block.id = 'e2e-keyboard';
+      block.textContent = 'Bildschirmtastatur (simuliert)';
+      Object.assign(block.style, {
+        position: 'fixed',
+        left: '0',
+        right: '0',
+        bottom: '0',
+        height: `${height}px`,
+        zIndex: '2147483647',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        font: '500 15px system-ui',
+        color: '#6b7280',
+        background: 'repeating-linear-gradient(0deg, #d1d5db 0 1px, #e5e7eb 1px 58px)',
+        pointerEvents: 'none',
+      });
+      document.body.append(block);
+    },
+  });
+}
+
+async function setKeyboard(page: Page, on: boolean) {
+  const landscape = (page.viewportSize()?.width ?? 0) > (page.viewportSize()?.height ?? 0);
+  const height = on ? KEYBOARD_HEIGHT[landscape ? 'landscape' : 'portrait'] : 0;
+  await page.evaluate(
+    (h) => (window as unknown as { __setKeyboard: (n: number) => void }).__setKeyboard(h),
+    height,
+  );
+  await page.waitForTimeout(300);
+}
+
+/** First start: empty setup, a mismatch error with the strength meter, the keyboard. */
+async function captureSetup(page: Page, variant: string) {
+  await page.goto(PREVIEW_URL, { waitUntil: 'networkidle' });
+  await page.getByTestId('setup-password').waitFor();
+  await page.waitForTimeout(700);
+  await capture(page, `lock-setup-${variant}`);
+
+  await page.getByTestId('setup-password').fill(TEST_PASSWORD);
+  await page.getByTestId('setup-repeat').fill('Cockpit-Test');
+  await page.getByTestId('setup-submit').click();
+  await page.getByText('Die Passwörter stimmen nicht überein.').waitFor();
+  await page.waitForTimeout(600);
+  await capture(page, `lock-setup-error-${variant}`);
+
+  await page.getByTestId('setup-repeat').fill(TEST_PASSWORD);
+  await page.getByTestId('setup-repeat').focus();
+  await setKeyboard(page, true);
+  await capture(page, `lock-setup-keyboard-${variant}`);
+  await setKeyboard(page, false);
+
+  await page.getByRole('switch', { name: /Verstanden/ }).click();
+  await page.getByTestId('setup-submit').click();
+  await page.getByTestId('lock-screen').waitFor({ state: 'detached' });
+}
+
+/** Locked: unlock screen, the unlock moment, a wrong password and the wait. */
+async function captureUnlock(page: Page, variant: string) {
+  await page.goto(`${PREVIEW_URL}#/settings`);
+  // Reload: no dialog or overlay from the previous shot.
+  await page.reload({ waitUntil: 'networkidle' });
+  await unlockIfLocked(page);
+  await page.getByTestId('lock-now').click();
+  const field = page.getByTestId('unlock-password');
+  await field.waitFor();
+  await page.waitForTimeout(700);
+  await capture(page, `lock-unlock-${variant}`);
+
+  await field.fill(TEST_PASSWORD);
+  await page.getByTestId('unlock-submit').click();
+  await page.locator('[data-state="success"]').waitFor();
+  await page.waitForTimeout(450);
+  await capture(page, `lock-opening-${variant}`);
+  await page.getByTestId('lock-screen').waitFor({ state: 'detached' });
+
+  await page.getByTestId('sidebar-lock').or(page.getByTestId('lock-now')).first().click();
+  for (const attempt of [1, 2, 3]) {
+    await field.fill(`falsch-${attempt}`);
+    await page.getByTestId('unlock-submit').click();
+    await page
+      .getByText(attempt < 3 ? 'Das Passwort stimmt nicht.' : /Zu viele Versuche/)
+      .waitFor();
+    await page.waitForTimeout(700);
+    if (attempt === 1) await capture(page, `lock-unlock-error-${variant}`);
+  }
+  await capture(page, `lock-unlock-wait-${variant}`);
+}
+
+async function settingsSecurity(page: Page) {
+  await page.getByTestId('settings-security').evaluate((element) => {
+    element.scrollIntoView({ block: 'start' });
+  });
+}
+
+async function changePassword(page: Page) {
+  await page.getByRole('button', { name: 'Passwort ändern' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Passwort ändern' });
+  await dialog.getByLabel('Aktuelles Passwort').fill(TEST_PASSWORD);
+  await dialog.getByLabel('Neues Passwort', { exact: true }).fill('Sonnenblume Fahrrad Wolke');
+}
+
+async function devVault(page: Page) {
+  const section = page.getByTestId('dev-section-vault');
+  for (let i = 0; i < 3; i += 1) {
+    await section.getByRole('button', { name: 'Testaufgabe anlegen' }).click();
+    await section
+      .getByTestId('vault-count-tasks')
+      .filter({ hasText: String(i + 1) })
+      .waitFor();
+  }
+  await section.getByRole('button', { name: 'Letzte ändern' }).click();
+  await page.waitForTimeout(3200); // let the toasts disappear
 }
 
 async function enableDevMode(page: Page) {
@@ -61,7 +218,10 @@ const SHOTS: Shot[] = [
   { route: '/library', name: 'library' },
   { route: '/brand', name: 'brand' },
   { route: '/settings', name: 'settings', scroll: true },
+  { route: '/settings', name: 'settings-security', prepare: settingsSecurity },
+  { route: '/settings', name: 'settings-password', prepare: changePassword },
   { route: '/dev/ui', name: 'dev-ui', prepare: enableDevMode, scroll: true },
+  { route: '/dev/ui', name: 'dev-vault', prepare: devVault },
   { route: '/dev/ui', name: 'dev-modal', prepare: click('Modal öffnen') },
   { route: '/dev/ui', name: 'dev-sheet', prepare: click('Bottom Sheet öffnen') },
   { route: '/dev/ui', name: 'dev-side-panel', prepare: click('Seitenpanel öffnen') },
@@ -139,16 +299,29 @@ try {
       // Keep screenshots free of the "offline ready" toast.
       serviceWorkers: 'block',
     });
+    await context.addInitScript(simulatedKeyboardScript);
     const page = await context.newPage();
     const wide = (variant.options.viewport?.width ?? 0) >= 900;
+    const split = variant.name.startsWith('split');
+    if (!ONLY || ONLY.startsWith('lock')) {
+      await captureSetup(page, variant.name);
+    } else {
+      await page.goto(PREVIEW_URL, { waitUntil: 'networkidle' });
+      await page.getByTestId('setup-password').fill(TEST_PASSWORD);
+      await page.getByTestId('setup-repeat').fill(TEST_PASSWORD);
+      await page.getByRole('switch', { name: /Verstanden/ }).click();
+      await page.getByTestId('setup-submit').click();
+      await page.getByTestId('lock-screen').waitFor({ state: 'detached' });
+    }
     // A filtered run still needs the developer mode (normally enabled by the dev-ui shot).
     if (ONLY) await enableDevMode(page);
     const shots = SHOTS.filter((s) => !ONLY || s.name.startsWith(ONLY));
-    for (const shot of variant.name.startsWith('split') ? shots.slice(0, SPLIT_SHOTS) : shots) {
+    for (const shot of split ? shots.slice(0, SPLIT_SHOTS) : shots) {
       if (shot.wideOnly && !wide) continue;
       await page.goto(`${PREVIEW_URL}#${shot.route}`, { waitUntil: 'networkidle' });
       // Same hash = no navigation; reload so dialogs from the previous shot are gone.
       await page.reload({ waitUntil: 'networkidle' });
+      await unlockIfLocked(page);
       await page.waitForTimeout(400);
       await shot.prepare?.(page);
       const container = page.locator('[data-scroll-container]');
@@ -172,6 +345,7 @@ try {
         await capture(page, `${shot.name}-${part}-${variant.name}`);
       }
     }
+    if (!split && (!ONLY || ONLY.startsWith('lock'))) await captureUnlock(page, variant.name);
     await context.close();
   }
 } finally {

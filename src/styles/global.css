@@ -172,6 +172,13 @@
   opacity: 0.55;
 }
 
+/* Lock screen (src/app/lock): accent and signal yellow light behind the gauge. */
+.lock-glow {
+  background:
+    radial-gradient(closest-side, var(--accent-glow), transparent 70%),
+    radial-gradient(40% 40% at 65% 70%, var(--signal-glow), transparent 70%);
+}
+
 /* Search fields (SearchInput): own clear button instead of the native one. */
 .search-input {
   appearance: none;

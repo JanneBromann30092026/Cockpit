@@ -1,10 +1,13 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
-import { Check, Keyboard } from 'lucide-react';
-import { Button, SegmentedControl, Surface, Toggle } from '@/components/ui';
+import { Check, Keyboard, Trash2 } from 'lucide-react';
+import { Button, ConfirmDialog, SegmentedControl, Surface, Toggle } from '@/components/ui';
+import { E2E_TEST_PASSWORD } from '@/core/devConstants';
 import { useShortcutsHelp } from '@/app/shortcuts/shortcutsStore';
 import { Page } from '@/app/shell/Page';
 import { de } from '@/i18n/de';
+import { vault } from '@/services/vault';
+import { SecuritySettings } from './SecuritySettings';
 import { THEME_PREFERENCES, useSettings } from './settingsStore';
 import { AboutInfo, StorageInfo } from './SystemStatus';
 
@@ -53,6 +56,7 @@ export function SettingsPage() {
   const reduceMotion = useSettings((s) => s.reduceMotion);
   const devMode = useSettings((s) => s.devMode);
   const set = useSettings((s) => s.set);
+  const [resetting, setResetting] = useState(false);
 
   return (
     <Page title={t.title} width="narrow" actions={<SavedIndicator />}>
@@ -91,6 +95,10 @@ export function SettingsPage() {
           </div>
         </Section>
 
+        <Section title={t.security.title} testId="settings-security">
+          <SecuritySettings />
+        </Section>
+
         <Section title={t.storage.title} testId="settings-storage">
           <StorageInfo />
         </Section>
@@ -100,13 +108,46 @@ export function SettingsPage() {
         </Section>
 
         <Section title={t.developer} testId="settings-developer">
-          <Toggle
-            label={t.devMode}
-            description={t.devModeHint}
-            checked={devMode}
-            onChange={(v) => void set('devMode', v)}
-          />
+          <div className="flex flex-col gap-4">
+            <Toggle
+              label={t.devMode}
+              description={t.devModeHint}
+              checked={devMode}
+              onChange={(v) => void set('devMode', v)}
+            />
+            {devMode && (
+              <>
+                <p className="text-sm text-fg-muted">{t.testPassword(E2E_TEST_PASSWORD)}</p>
+                <div className="h-px bg-line" />
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="flex flex-col">
+                    <span className="text-base text-fg">{t.resetDatabase}</span>
+                    <span className="text-sm text-fg-muted">{t.resetDatabaseHint}</span>
+                  </span>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    icon={Trash2}
+                    onClick={() => setResetting(true)}
+                  >
+                    {t.resetDatabase}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
         </Section>
+        <ConfirmDialog
+          open={resetting}
+          onClose={() => setResetting(false)}
+          onConfirm={async () => {
+            await vault.resetAll();
+            window.location.reload();
+          }}
+          title={t.resetTitle}
+          message={t.resetText}
+          confirmLabel={t.resetConfirm}
+        />
       </div>
     </Page>
   );

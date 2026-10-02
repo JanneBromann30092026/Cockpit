@@ -1,11 +1,22 @@
 import { Dexie, type EntityTable } from 'dexie';
-import type { Setting } from './types';
+import type { EncryptedRow, MetaEntry, SecretRow, Setting } from './types';
 
 /** Own name: Kompass and Synapse run on the same origin (GitHub Pages) with their own DBs. */
 export const DB_NAME = 'cockpit';
 
+/** Tables with personal data (decrypted into the in-memory store after unlocking). */
+export const DATA_TABLES = ['tasks', 'documents', 'reviews', 'library', 'brand'] as const;
+export type DataTable = (typeof DATA_TABLES)[number];
+
 export class CockpitDb extends Dexie {
   settings!: EntityTable<Setting, 'key'>;
+  meta!: EntityTable<MetaEntry, 'key'>;
+  tasks!: EntityTable<EncryptedRow, 'id'>;
+  documents!: EntityTable<EncryptedRow, 'id'>;
+  reviews!: EntityTable<EncryptedRow, 'id'>;
+  library!: EntityTable<EncryptedRow, 'id'>;
+  brand!: EntityTable<EncryptedRow, 'id'>;
+  secrets!: EntityTable<SecretRow, 'key'>;
 
   constructor(name = DB_NAME) {
     super(name);
@@ -14,12 +25,26 @@ export class CockpitDb extends Dexie {
      * Migrations: never change an existing version. Every schema change is a new
      * `this.version(n + 1).stores({...changed tables only}).upgrade(tx => ...)`.
      * Only indexed fields are listed; all other fields are stored anyway.
+     * Personal data only ever lives in the encrypted `payload` of a row; readable are
+     * only technical fields (ids, timestamps).
      */
 
     // Step 1: technical settings only (theme, motion, sidebar, developer mode). Unencrypted
     // on purpose: they contain no personal data and are needed before the app is unlocked.
     this.version(1).stores({
       settings: 'key',
+    });
+
+    // Step 2: vault parameters and the encrypted tables (new tables, nothing to migrate).
+    // Files (PDFs, photos) get their own table with step 6.
+    this.version(2).stores({
+      meta: 'key',
+      tasks: 'id, updatedAt',
+      documents: 'id, updatedAt',
+      reviews: 'id, updatedAt',
+      library: 'id, updatedAt',
+      brand: 'id, updatedAt',
+      secrets: 'key',
     });
   }
 }

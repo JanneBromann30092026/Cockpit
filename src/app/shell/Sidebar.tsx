@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router';
 import { motion } from 'motion/react';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Lock, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { cn, IconButton, Tooltip } from '@/components/ui';
 import { useSettings } from '@/features/settings/settingsStore';
 import { de } from '@/i18n/de';
+import { vault } from '@/services/vault';
 import { spring } from '@/styles/motion';
 import { navItems, type NavItem } from './navItems';
 
@@ -93,6 +94,21 @@ export function Sidebar() {
           <SidebarLink key={item.to} item={item} collapsed={collapsed} />
         ))}
       </nav>
+
+      <div className={cn('mt-auto flex flex-col px-3', collapsed && 'items-center')}>
+        <MaybeTooltip show={collapsed} content={de.nav.lock}>
+          <button
+            type="button"
+            onClick={() => vault.lock('manual')}
+            aria-label={collapsed ? de.nav.lock : undefined}
+            className={itemClass(false, collapsed)}
+            data-testid="sidebar-lock"
+          >
+            <Lock size={22} aria-hidden className="shrink-0" />
+            {!collapsed && <span className="truncate">{de.nav.lock}</span>}
+          </button>
+        </MaybeTooltip>
+      </div>
     </motion.aside>
   );
 }

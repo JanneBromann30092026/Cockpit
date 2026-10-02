@@ -101,7 +101,7 @@ Touch-first (iPad), wie Kompass:
 ## Roadmap
 - [x] 0 Projektkontext (CLAUDE.md)
 - [x] 1 Fundament: Setup, PWA, Deployment, Design-System & Shell (aus Kompass)
-- [ ] 2 Datenbank, Verschlüsselung & App-Sperre (aus Kompass)
+- [x] 2 Datenbank, Verschlüsselung & App-Sperre (aus Kompass)
 - [ ] 3 Einstellungen & optionale KI (Grundlage: Key, Modell, Test)
 - [ ] 4 Google-Anbindung & „Heute“ (Kalender, Gmail; Anmeldung auf dem iPad zuerst prüfen)
 - [ ] 5 Aufgaben (inkl. Anzeige in „Heute“)
@@ -126,3 +126,12 @@ Touch-first (iPad), wie Kompass:
   - Navigation: Heute, Aufgaben, Verträge, Reviews, Bibliothek, Marke, Einstellungen (+ Entwickler im Entwicklermodus); Routen /today, /tasks, /documents, /reviews, /library, /brand, /settings, /dev/ui. Platzhalter in src/features/coming-soon („Kommt in Schritt …“). Hardware-Tastatur: `1`–`7` öffnen die Bereiche (nicht in Textfeldern/Dialogen), `?` zeigt alle Kürzel.
   - Fokusmodus wie Kompass (`useFocusModeRequest`, Test in /dev/ui). Split View (500 px): Tab-Beschriftungen kürzen sich mit „…“.
   - `npm run screenshots` erzeugt alle Seiten in Quer/Hoch × Hell/Dunkel, Split View dunkel und `icon-preview.png`.
+- Schritt 2 (Datenbank, Verschlüsselung & App-Sperre):
+  - Aus Kompass (Stand Schritt 7) übernommen: Krypto-Formate (src/core/crypto), Web-Crypto-Schicht, Sitzungsschlüssel nur in src/services/crypto/session.ts, Tresor (src/services/vault.ts), Passwortwechsel mit Neuverschlüsselung in einer Transaktion (reencrypt.ts, prüft per IV, dass niemand dazwischen schrieb; bis zu 3 Versuche), Abgleich zwischen Tabs (src/data/sync.ts: liveQuery liest nur id + updatedAt, entschlüsselt wird außerhalb), Sperrbildschirm, Auto-Sperre, Fehlversuche mit Wartezeit (in meta, übersteht Neuladen), „Passwort vergessen?“ (LÖSCHEN eingeben), Schlüsselbund/Face ID über echtes `<form>` mit verstecktem Benutzerfeld „Cockpit“.
+  - Krypto: PBKDF2-SHA-256 mit **800.000 Iterationen** (Mindestwert 600.000 wird beim Lesen geprüft), AES-GCM-256, je Schreibvorgang neuer 12-Byte-IV, Format `{v: 1, iv, ct}`, AAD `cockpit:v1:<tabelle>:<id>`, Passwort NFC-normalisiert. Gemessen im Cloud-Chromium (Xeon 2,8 GHz, schwankend): 600k ≈ 360 ms, 800k ≈ 390 ms, 1 Mio. ≈ 430 ms. Die tatsächliche Dauer auf dem iPad zeigt Einstellungen → Sicherheit im Entwicklermodus.
+  - Dexie **Version 2**: `meta` (Tresor, Schema-Info, Fehlversuche), verschlüsselte Datentabellen `tasks`, `documents`, `reviews`, `library`, `brand` (lesbar nur id + updatedAt) und `secrets` (Schlüssel `key`, für den API-Key in Schritt 3). Bewusst noch nicht: Dateien (eigene Tabelle mit Schritt 6, Inhalt nie im Speicher-Store), Entwürfe, Backups.
+  - Datenmodell in src/data/schemas.ts nach den Feldern der Vision (Aufgabe, Vertrag, Review, Bibliothekseintrag, Markenprofil) mit `demo`-Kennzeichen; die Feature-Schritte verfeinern es. Neue optionale Felder brauchen keine Migration (verschlüsselte JSON-Payload). Aufzählungen (Status, Priorität, Kategorien, Review-Art, Bibliothekstyp) als englische Schlüssel in src/data/domain.ts.
+  - Repositories: generisches `createRecordRepo` (list/get/create/update/remove, zod-Validierung, strikt steigendes updatedAt) für alle Datentabellen; Fachlogik kommt in den Schritten dazu. Komponenten lesen über `useDataStore`, schreiben nur über Repositories.
+  - Sperrbildschirm mit lebendem Rundinstrument (`GaugeMark`): Nadel misst während der Prüfung, schwingt beim Entsperren in die Icon-Stellung und die Skala leuchtet auf. Seitenleiste hat „Sperren“, Einstellungen → Sicherheit „Jetzt sperren“, Sperrzeit (1–30 Min., Standard 5), Passwort ändern. Hintergrund > 1 Min. sperrt immer.
+  - Testpasswort `Cockpit-Test-2026!` (src/core/devConstants.ts = e2e/ipad.ts), im Entwicklermodus sichtbar. Entwicklerbereich „Verschlüsselung testen“: Testaufgaben anlegen/ändern/löschen, Zähler je Tabelle, Ciphertext-Vorschau; „Datenbank zurücksetzen“ in den Einstellungen.
+  - Tests: Krypto (Round-Trip, falsches Passwort, manipulierter Ciphertext/IV, AAD, Formatversion), Tresor, Passwortwechsel inkl. secrets, Sync, Repositories, Schema-Upgrade von Version 1. E2E: Ersteinrichtung, Sperren/Entsperren, Wartezeit, Inaktivität und Hintergrund (Zeitverschiebung nur für `Date.now()`), kein Klartext in IndexedDB/localStorage, zweiter Tab, Passwortwechsel, Passwort vergessen, Offline-Entsperren.

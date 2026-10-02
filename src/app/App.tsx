@@ -3,9 +3,10 @@ import { HashRouter } from 'react-router';
 import { MotionConfig } from 'motion/react';
 import { Toaster } from '@/components/ui';
 import { useSettings } from '@/features/settings/settingsStore';
+import { vault } from '@/services/vault';
 import { Background } from './Background';
 import { ErrorBoundary } from './ErrorBoundary';
-import { Shell } from './shell/Shell';
+import { VaultGate } from './lock/VaultGate';
 import { applyReduceMotion, applyTheme, onSystemThemeChange } from './theme';
 import { UpdatePrompt } from './UpdatePrompt';
 import { useAppStatus } from './useAppStatus';
@@ -16,8 +17,10 @@ function useStartup() {
   useEffect(() => {
     void (async () => {
       await init();
-      if (!useAppStatus.getState().database?.ok) return;
-      await loadSettings();
+      const databaseOk = useAppStatus.getState().database?.ok === true;
+      // Settings are not encrypted: theme and lock time apply before unlocking.
+      if (databaseOk) await loadSettings();
+      await vault.init(databaseOk);
     })();
   }, [init, loadSettings]);
 }
@@ -44,7 +47,7 @@ export function App() {
       <MotionConfig reducedMotion={reduceMotion ? 'always' : 'user'}>
         <HashRouter>
           <Background />
-          <Shell />
+          <VaultGate />
           <Toaster />
           <UpdatePrompt />
         </HashRouter>
