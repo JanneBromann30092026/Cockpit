@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1D44B8"/>
+      <stop offset="0.55" stop-color="#0C1C55"/>
+      <stop offset="1" stop-color="#050B26"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="52%">
+      <stop offset="0" stop-color="#4F7DFF" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#4F7DFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="scale" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#4F7DFF"/>
+      <stop offset="1" stop-color="#A9C1FF"/>
+    </linearGradient>
+  </defs>
+  <rect id="background" width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="112" fill="url(#glow)"/>
+
+  <!-- Bezel of the round instrument. -->
+  <circle cx="256" cy="264" r="182" fill="none" stroke="#E8EEFF" stroke-opacity="0.18" stroke-width="6"/>
+
+  <!-- Scale: faint track over 240°, lit part up to the needle. -->
+  <path d="M126.1 339 A150 150 0 1 1 385.9 339" fill="none" stroke="#E8EEFF" stroke-opacity="0.14" stroke-width="16" stroke-linecap="round"/>
+  <path d="M126.1 339 A150 150 0 0 1 348.3 145.8" fill="none" stroke="url(#scale)" stroke-width="16" stroke-linecap="round"/>
+
+  <!-- Ticks: major every 30°, minor in between. -->
+  <g stroke="#E8EEFF" stroke-linecap="round" fill="none">
+  <g stroke-opacity="0.85" stroke-width="7">
+    <path d="M146.9 327 L165.9 316"/>
+    <path d="M130 264 L152 264"/>
+    <path d="M146.9 201 L165.9 212"/>
+    <path d="M193 154.9 L204 173.9"/>
+    <path d="M256 138 L256 160"/>
+    <path d="M319 154.9 L308 173.9"/>
+    <path d="M365.1 201 L346.1 212"/>
+    <path d="M382 264 L360 264"/>
+    <path d="M365.1 327 L346.1 316"/>
+  </g>
+  <g stroke-opacity="0.35" stroke-width="5">
+    <path d="M134.3 296.6 L145.9 293.5"/>
+    <path d="M134.3 231.4 L145.9 234.5"/>
+    <path d="M166.9 174.9 L175.4 183.4"/>
+    <path d="M223.4 142.3 L226.5 153.9"/>
+    <path d="M288.6 142.3 L285.5 153.9"/>
+    <path d="M345.1 174.9 L336.6 183.4"/>
+    <path d="M377.7 231.4 L366.1 234.5"/>
+    <path d="M377.7 296.6 L366.1 293.5"/>
+  </g>
+  </g>
+
+  <!-- Needle in signal yellow, faceted. -->
+  <path d="M348.3 145.8 L241 252.3 L226.4 301.8 Z" fill="#FFE27A"/>
+  <path d="M348.3 145.8 L271 275.7 L226.4 301.8 Z" fill="#F5C400"/>
+  <circle cx="256" cy="264" r="22" fill="#0C1C55" stroke="#F4F7FF" stroke-width="7"/>
+</svg>

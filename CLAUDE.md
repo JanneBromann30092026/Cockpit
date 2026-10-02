@@ -100,7 +100,7 @@ Touch-first (iPad), wie Kompass:
 
 ## Roadmap
 - [x] 0 Projektkontext (CLAUDE.md)
-- [ ] 1 Fundament: Setup, PWA, Deployment, Design-System & Shell (aus Kompass)
+- [x] 1 Fundament: Setup, PWA, Deployment, Design-System & Shell (aus Kompass)
 - [ ] 2 Datenbank, Verschlüsselung & App-Sperre (aus Kompass)
 - [ ] 3 Einstellungen & optionale KI (Grundlage: Key, Modell, Test)
 - [ ] 4 Google-Anbindung & „Heute“ (Kalender, Gmail; Anmeldung auf dem iPad zuerst prüfen)
@@ -117,3 +117,12 @@ Touch-first (iPad), wie Kompass:
 - Entstehung: Guide „5 Dinge, die du an einem freien Wochenende mit Claude baust“ (gptmarlon.com). Statt Claude + Notion eine eigene PWA, weil alles in einer App auf dem Homescreen liegen soll, mit Push-Mitteilungen. Notion entfällt (Notion-API erlaubt keinen direkten Zugriff aus dem Browser). Geplante Aufgaben aus dem Guide (Morgen-Briefing, Tages-/Wochen-Review) werden zu Push-Erinnerungen + Auswertung beim Öffnen, weil Web-Apps auf dem iPad nicht im Hintergrund laufen.
 - Entscheidungen vor dem Start: Name „Cockpit“; KI optional (eigener API-Key, separat abgerechnet); Google Kalender und Gmail von Anfang an (Schritt 4); Push per GitHub Actions (kostenlos, Zeiten ungenau).
 - Getrennt von Kompass: keine gemeinsamen Daten oder Pakete; Kompass dient nur als Vorlage für Code.
+- Schritt 1 (Fundament):
+  - Basis ist der Stand von Kompass-Schritt 1 (gleiche Paketversionen, Lockfile übernommen), ergänzt um spätere allgemeine Verbesserungen aus Kompass: `ChoiceChip`, `SearchInput`, `SidePanel`, Toasts mit Aktion („Rückgängig“), BottomSheet hält das Feld über der Tastatur, `--on-signal`, Breakpoint `wide` in rem (56.25rem, sonst überschreibt `sm:` jede `wide:`-Klasse). Weggelassen: Kompass-Fachteile, Sperre/Tresor (Schritt 2), `PasswordInput` (Schritt 2), `noStyleInjectPlugin` (nur für force-graph in Kompass nötig).
+  - Eigene Namen (gleicher Origin wie Kompass/Synapse): Dexie-DB `cockpit` (Version 1 nur `settings`: Theme, Bewegung, Seitenleiste, Entwicklermodus – bewusst unverschlüsselt, keine persönlichen Daten, vor dem Entsperren nötig; Schritt 2 ergänzt verschlüsselte Tabellen als **Version 2**), localStorage `cockpit.bootPrefs`, Workbox `cacheId: 'cockpit'`, Service-Worker-Scope `/Cockpit/` (E2E prüft alles).
+  - CSP: `connect-src 'self'`; Google (Schritt 4) und api.anthropic.com (Schritt 3) kommen erst mit ihrem Schritt dazu.
+  - Farben (alle Textfarben ≥ 4,5:1 auf --bg/--surface): Akzent Kobaltblau hell `#1d4ed8` (weiße Schrift), dunkel `#6b93ff` mit dunkler Schrift (`--on-accent` `#050b1f`). Signalgelb: `--signal` (`#f5c400`/`#ffd23f`) für Flächen/Punkte, `--signal-fg` (`#7a5800`/`#ffd23f`) für Text, `--on-signal` für Schrift auf Gelb; Badge-Ton `signal`. Erfolg Grün (`#15803d`/`#4ade80`), Warnung Rot-Orange (`#c2410c`/`#fb923c`), Fehler Rose. Hintergrund `#f3f5f9`/`#090d16` (= theme-color, Startbilder). Icon-Töne `--cobalt-deep/-cobalt/-cobalt-light`.
+  - Icon: Quelle `public/icons/favicon.svg` (Rundinstrument: Skala über 240°, beleuchteter Teil bis zur Nadel, Nadel Signalgelb, dunkler Blau-Verlauf). `npm run icons` erzeugt pwa-192/512, maskable und apple-touch-icon (randlos) sowie iOS-Startbilder hell/dunkel. Leere Zustände zeigen dasselbe Motiv klein.
+  - Navigation: Heute, Aufgaben, Verträge, Reviews, Bibliothek, Marke, Einstellungen (+ Entwickler im Entwicklermodus); Routen /today, /tasks, /documents, /reviews, /library, /brand, /settings, /dev/ui. Platzhalter in src/features/coming-soon („Kommt in Schritt …“). Hardware-Tastatur: `1`–`7` öffnen die Bereiche (nicht in Textfeldern/Dialogen), `?` zeigt alle Kürzel.
+  - Fokusmodus wie Kompass (`useFocusModeRequest`, Test in /dev/ui). Split View (500 px): Tab-Beschriftungen kürzen sich mit „…“.
+  - `npm run screenshots` erzeugt alle Seiten in Quer/Hoch × Hell/Dunkel, Split View dunkel und `icon-preview.png`.
