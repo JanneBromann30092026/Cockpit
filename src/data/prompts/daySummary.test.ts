@@ -13,15 +13,27 @@ describe('day summary prompt', () => {
           updates: [{ from: 'Bank', subject: 'Kontoauszug' }],
           newsletters: 7,
         },
+        tasks: [
+          { title: 'Steuer', priority: 'hoch', overdueDays: 2 },
+          { title: 'Einkaufen', priority: 'mittel', overdueDays: 0 },
+        ],
       }),
     ) as Record<string, unknown>;
     expect(message).toMatchObject({
       termine: [{ title: 'Vorlesung' }],
       mails: { anzahl_newsletter_und_werbung: 7, updates: [{ subject: 'Kontoauszug' }] },
+      faellige_aufgaben: [
+        { titel: 'Steuer', prioritaet: 'hoch', ueberfaellig_seit_tagen: 2 },
+        { titel: 'Einkaufen', prioritaet: 'mittel' },
+      ],
     });
     expect(
-      JSON.parse(buildDaySummaryMessage({ now: 'x', events: null, mails: null })),
-    ).toMatchObject({ termine: 'nicht verfügbar', mails: 'nicht verfügbar' });
+      JSON.parse(buildDaySummaryMessage({ now: 'x', events: null, mails: null, tasks: [] })),
+    ).toMatchObject({
+      termine: 'nicht verfügbar',
+      mails: 'nicht verfügbar',
+      faellige_aufgaben: [],
+    });
   });
 
   it('turns the answer into at most three clean sentences', () => {

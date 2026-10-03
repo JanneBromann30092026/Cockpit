@@ -74,7 +74,8 @@ export const de = {
     overviewByClaude: '(Claude)',
     summarize: 'Mit Claude formulieren',
     summarizing: 'Claude schreibt …',
-    summarizeHint: 'Sendet Termine, Absender, Betreffe und Vorschauzeilen an Anthropic.',
+    summarizeHint:
+      'Sendet Termine, fällige Aufgaben, Absender, Betreffe und Vorschauzeilen an Anthropic.',
     ruleBased: 'Ohne KI',
     resummarize: 'Neu formulieren',
     showRuleBased: 'Ohne KI anzeigen',
@@ -90,8 +91,12 @@ export const de = {
       focusNow: (title: string, end: string) => `Gerade läuft „${title}“ (bis ${end} Uhr).`,
       focusNext: (title: string, time: string, location?: string) =>
         `Als Nächstes: „${title}“ um ${time} Uhr${location ? ` (${location})` : ''}.`,
+      focusTaskOverdue: (title: string, days: number) =>
+        `Das Wichtigste: „${title}“ ist ${days === 1 ? 'seit gestern' : `seit ${days} Tagen`} überfällig.`,
+      focusTaskToday: (title: string) => `Das Wichtigste: „${title}“ ist heute fällig.`,
       focusNone: 'Heute steht nichts Dringendes an.',
       scheduleUnknown: 'Deine Termine konnten gerade nicht geladen werden.',
+      scheduleNotConnected: 'Deine Termine siehst du hier, sobald Google verbunden ist.',
       scheduleFree: 'Keine Termine – der Tag gehört dir.',
       scheduleAllDayOnly: (count: number) =>
         count === 1
@@ -109,6 +114,20 @@ export const de = {
         ` – „${before}“ und „${after}“ überschneiden sich.`,
       scheduleRelaxed: ' – dazwischen bleibt genug Luft.',
       mailsUnknown: 'Deine Mails konnten gerade nicht geladen werden.',
+      tasks: (due: number, overdue: number) =>
+        `${due === 1 ? '1 fällige Aufgabe' : `${due} fällige Aufgaben`}${
+          overdue === 0
+            ? ''
+            : overdue === due && due > 1
+              ? ', alle überfällig'
+              : `, davon ${overdue} überfällig`
+        }`,
+      mailsAndTasks: (mails: string, tasks: string) => `${mails} – dazu ${tasks}.`,
+      noMailsButTasks: (tasks: string) => `Keine ungelesenen Mails seit gestern, aber ${tasks}.`,
+      mailsFailedAndTasks: (tasks: string) =>
+        `Deine Mails konnten gerade nicht geladen werden – dazu ${tasks}.`,
+      onlyTasks: (tasks: string) => `Auf deiner Liste: ${tasks}.`,
+      noTasks: 'Heute ist keine Aufgabe fällig.',
       mailsNone: 'Keine ungelesenen Mails seit gestern.',
       mailsTotal: (count: number) =>
         count === 1 ? '1 ungelesene Mail seit gestern' : `${count} ungelesene Mails seit gestern`,
@@ -158,12 +177,84 @@ export const de = {
       reconnect: 'Neu verbinden',
     },
     sourceError: (reason: string) => `Konnte nicht geladen werden: ${reason}`,
+    tasks: {
+      title: 'Fällige Aufgaben',
+      empty: 'Heute ist nichts fällig.',
+      next: (title: string, when: string) => `Als Nächstes: „${title}“ ${when}.`,
+      all: 'Alle Aufgaben',
+      add: 'Neue Aufgabe',
+    },
     later: {
-      tasks: 'Fällige Aufgaben',
-      tasksText: 'Überfällige und heute fällige Aufgaben erscheinen hier.',
       documents: 'Fristen & Verträge',
       documentsText: 'Demnächst fällige Verträge und Kündigungsfristen erscheinen hier.',
     },
+  },
+  tasks: {
+    title: 'Aufgaben',
+    add: 'Neue Aufgabe',
+    quickPlaceholder: 'Neue Aufgabe …',
+    quickAdd: 'Hinzufügen',
+    quickToday: 'Heute',
+    quickTomorrow: 'Morgen',
+    quickHigh: 'Wichtig',
+    quickOptions: 'Optionen für die neue Aufgabe',
+    count: (n: number) => (n === 1 ? '1 offen' : `${n} offen`),
+    dueCount: (n: number) => `${n} fällig`,
+    buckets: {
+      overdue: 'Überfällig',
+      today: 'Heute',
+      tomorrow: 'Morgen',
+      week: 'Nächste 7 Tage',
+      later: 'Später',
+      someday: 'Ohne Datum',
+    },
+    due: {
+      today: 'heute',
+      tomorrow: 'morgen',
+      yesterday: 'seit gestern',
+      inDays: (n: number) => `in ${n} Tagen`,
+      daysAgo: (n: number) => `seit ${n} Tagen`,
+    },
+    priorities: { high: 'Hoch', medium: 'Mittel', low: 'Niedrig' },
+    priorityBadge: { high: 'Wichtig', medium: '', low: 'Niedrig' },
+    titleField: 'Titel',
+    titlePlaceholder: 'Was ist zu tun?',
+    dueDate: 'Fällig am',
+    noDate: 'Ohne Datum',
+    nextWeek: 'In einer Woche',
+    priority: 'Priorität',
+    notes: 'Notiz',
+    save: 'Speichern',
+    cancel: 'Abbrechen',
+    editTitle: 'Aufgabe bearbeiten',
+    required: 'Bitte einen Titel eingeben.',
+    completeLabel: (title: string) => `„${title}“ erledigen`,
+    reopenLabel: (title: string) => `„${title}“ wieder öffnen`,
+    actions: (title: string) => `Aktionen für „${title}“`,
+    postponeTomorrow: 'Auf morgen',
+    postponeWeek: 'Eine Woche später',
+    postponeDate: 'Datum wählen …',
+    postponeTitle: 'Neues Fälligkeitsdatum',
+    edit: 'Bearbeiten',
+    remove: 'Löschen',
+    reopen: 'Wieder öffnen',
+    complete: 'Erledigt',
+    doneOn: (date: string) => `Erledigt am ${date}`,
+    swipeHint: 'Tipp: Nach rechts wischen erledigt eine Aufgabe.',
+    toastAdded: (title: string) => `„${title}“ angelegt`,
+    toastDone: (title: string) => `„${title}“ erledigt`,
+    toastReopened: (title: string) => `„${title}“ wieder offen`,
+    toastPostponed: (date: string) => `Verschoben auf ${date}`,
+    toastDeleted: (title: string) => `„${title}“ gelöscht`,
+    toastSaved: 'Gespeichert',
+    undo: 'Rückgängig',
+    saveFailed: 'Konnte nicht gespeichert werden. Bitte erneut versuchen.',
+    empty: 'Keine offenen Aufgaben',
+    emptyText: 'Leg oben deine erste Aufgabe an. Was heute fällig ist, erscheint auch in „Heute“.',
+    allDone: 'Alles erledigt',
+    allDoneText: 'Keine offenen Aufgaben – gut gemacht.',
+    showDone: (n: number) => `Erledigte anzeigen (${n})`,
+    hideDone: 'Erledigte ausblenden',
   },
   google: {
     title: 'Google (Kalender & Gmail)',
@@ -236,10 +327,6 @@ export const de = {
   comingSoon: {
     badge: (step: number) => `Kommt in Schritt ${step}`,
     pages: {
-      tasks: {
-        heading: 'Alles, was zu tun ist',
-        text: 'Aufgaben mit Fälligkeit und Priorität. Was heute fällig oder überfällig ist, erscheint direkt in „Heute“.',
-      },
       documents: {
         heading: 'Dein zweites Gehirn',
         text: 'Mietvertrag, Versicherungen, Handy, Abos: Betrag, nächste Fälligkeit und Kündigungsfrist – mit Original-PDF oder Foto, verschlüsselt auf dem iPad. Fristen übernimmst du in den Kalender.',
@@ -394,7 +481,7 @@ export const de = {
     title: 'Entwickler',
     vault: {
       title: 'Verschlüsselung testen',
-      hint: 'Legt erfundene Testaufgaben an, um Verschlüsselung und Abgleich zu prüfen. Die Aufgabenliste folgt in Schritt 5.',
+      hint: 'Legt erfundene Testaufgaben an, um Verschlüsselung und Abgleich zu prüfen (als Demo markiert).',
       tables: {
         tasks: 'Aufgaben',
         documents: 'Verträge',
@@ -428,6 +515,15 @@ export const de = {
       title: 'Heute',
       hint: 'Zeigt einen erfundenen Tag mit Terminen und Mails – ohne Google. Bleibt nur im Arbeitsspeicher.',
       load: 'Demo-Tag laden',
+    },
+    demoData: {
+      title: 'Demo-Daten',
+      hint: 'Legt erfundene Aufgaben an (verschlüsselt gespeichert, als Demo markiert). „Demo-Daten löschen“ entfernt nur diese.',
+      createTasks: 'Demo-Aufgaben anlegen',
+      removeAll: 'Demo-Daten löschen',
+      created: (n: number) => `${n} Demo-Aufgaben angelegt`,
+      removed: (n: number) => (n === 1 ? '1 Demo-Eintrag gelöscht' : `${n} Demo-Einträge gelöscht`),
+      count: (n: number) => (n === 1 ? '1 Demo-Eintrag' : `${n} Demo-Einträge`),
     },
     disabledTitle: 'Entwicklermodus ist aus',
     disabledText: 'Aktiviere ihn in den Einstellungen, um diesen Bereich zu sehen.',
@@ -582,6 +678,10 @@ export const de = {
       {
         title: nav.today,
         items: [{ keys: ['R'], label: 'Termine und Mails aktualisieren' }],
+      },
+      {
+        title: nav.tasks,
+        items: [{ keys: ['N'], label: 'Neue Aufgabe' }],
       },
     ],
   },

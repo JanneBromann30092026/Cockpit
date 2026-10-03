@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
-import { motion } from 'motion/react';
+import { useNavigate } from 'react-router';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   CalendarDays,
   CircleAlert,
@@ -8,6 +9,7 @@ import {
   LogIn,
   Mail as MailIcon,
   MapPin,
+  Plus,
   RefreshCw,
   Sparkles,
   X,
@@ -15,12 +17,18 @@ import {
 } from 'lucide-react';
 import { Badge, Button, cn, EmptyState, Skeleton, Surface } from '@/components/ui';
 import { useHotkeys } from '@/app/hooks/useHotkeys';
+import { useLocalDate } from '@/app/hooks/useLocalDate';
 import { useNow } from '@/app/hooks/useNow';
 import { Page } from '@/app/shell/Page';
 import { eventTiming, localDate, tightSpots, type CalendarEvent } from '@/core/calendar/events';
 import { mailGroup, type Mail, type MailGroup } from '@/core/mail/classify';
+import { compareOpenTasks, dueTasks } from '@/core/tasks/tasks';
 import { overviewFacts } from '@/core/today/overview';
+import type { Task } from '@/data/schemas';
 import { useGoogleClientId, useSettings } from '@/features/settings/settingsStore';
+import { TaskEditor } from '@/features/tasks/TaskEditor';
+import { TaskRow } from '@/features/tasks/TaskRow';
+import { dueLabel, formatShortDate, useTasks } from '@/features/tasks/useTasks';
 import { de } from '@/i18n/de';
 import {
   connectWithPopup,
@@ -345,9 +353,11 @@ function MailsCard({ now }: { now: Date }) {
   );
 }
 
-function OverviewCard({ now }: { now: Date }) {
+function OverviewCard({ now, tasks }: { now: Date; tasks: readonly Task[] }) {
   const events = useToday((s) => s.events);
   const mails = useToday((s) => s.mails);
+  const calendarError = useToday((s) => s.calendarError);
+  const gmailError = useToday((s) => s.gmailError);
   const summary = useToday((s) => s.summary);
   const aiEnabled = useSettings((s) => s.aiEnabled);
   const aiModel = useSettings((s) => s.aiModel);
@@ -355,8 +365,11 @@ function OverviewCard({ now }: { now: Date }) {
   const byClaude = summary.status === 'done';
   const sentences = byClaude
     ? summary.summary.sentences
-    : overviewSentences(overviewFacts({ now, events, mails }));
-  const summarize = () => void summarizeToday({ enabled: aiEnabled, model: aiModel }, now);
+    : overviewSentences(overviewFacts({ now, events, mails, tasks }), {
+        calendarFailed: calendarError !== null,
+        gmailFailed: gmailError !== null,
+      });
+  const summarize = () => void summarizeToday({ enabled: aiEnabled, model: aiModel }, tasks, now);
 
   return (
     <motion.section
@@ -498,6 +511,47 @@ function ExpiredBanner() {
   );
 }
 
+/** Open tasks due today or earlier; completing works right here. */
+function TasksDueCard({ tasks, today }: { tasks: readonly Task[]; today: string }) {
+  const navigate = useNavigate();
+  const [adding, setAdding] = useState(false);
+  const due = dueTasks(tasks, today);
+  const next = tasks
+    .filter((task) => task.status === 'open' && task.dueDate !== undefined && task.dueDate > today)
+    .sort(compareOpenTasks)[0];
+
+  return (
+    <Card icon={ListChecks} title={t.tasks.title} count={due.length} testId="today-tasks">
+      {due.length === 0 ? (
+        <CardNote>
+          {next?.dueDate
+            ? `${t.tasks.empty} ${t.tasks.next(next.title, `${dueLabel(next.dueDate, today)} (${formatShortDate(next.dueDate)})`)}`
+            : t.tasks.empty}
+        </CardNote>
+      ) : (
+        <ul className="flex flex-col gap-2 px-3 pb-3">
+          <AnimatePresence initial={false}>
+            {due.map((task) => (
+              <TaskRow key={task.id} task={task} today={today} compact />
+            ))}
+          </AnimatePresence>
+        </ul>
+      )}
+      <div className="flex flex-wrap gap-2 border-t border-line px-4 py-3">
+        <Button size="sm" variant="secondary" icon={Plus} onClick={() => setAdding(true)}>
+          {t.tasks.add}
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => void navigate('/tasks')}>
+          {t.tasks.all}
+        </Button>
+      </div>
+      {adding && (
+        <TaskEditor today={today} defaultDueDate={today} onClose={() => setAdding(false)} />
+      )}
+    </Card>
+  );
+}
+
 /** A section a later roadmap step fills in. */
 function LaterCard({
   icon: Icon,
@@ -537,6 +591,9 @@ export function TodayPage() {
   const fetchedAt = useToday((s) => s.fetchedAt);
   const demo = useToday((s) => s.demo);
   const connected = status === 'connected';
+  const today = useLocalDate();
+  const tasks = useTasks();
+  const dueCount = dueTasks(tasks, today).length;
   const hasData =
     events !== null || mails !== null || calendarError !== null || gmailError !== null;
 
@@ -608,21 +665,23 @@ export function TodayPage() {
 
         {!demo && !connected && hasData && sessionError === 'EXPIRED' && <ExpiredBanner />}
         {!showData && <ConnectCard error={sessionError} />}
-        {(events !== null || mails !== null) && <OverviewCard now={now} />}
-        {showData && (
-          <div className="grid items-start gap-6 wide:grid-cols-2">
-            <EventsCard now={now} />
-            <MailsCard now={now} />
-          </div>
+        {(events !== null || mails !== null || dueCount > 0) && (
+          <OverviewCard now={now} tasks={tasks} />
         )}
-        <div className="grid gap-4 wide:grid-cols-2">
-          <LaterCard icon={ListChecks} title={t.later.tasks} text={t.later.tasksText} step={5} />
-          <LaterCard
-            icon={FileText}
-            title={t.later.documents}
-            text={t.later.documentsText}
-            step={6}
-          />
+        <div className="grid items-start gap-6 wide:grid-cols-2">
+          <div className="flex min-w-0 flex-col gap-6">
+            {showData && <EventsCard now={now} />}
+            <TasksDueCard tasks={tasks} today={today} />
+          </div>
+          <div className="flex min-w-0 flex-col gap-6">
+            {showData && <MailsCard now={now} />}
+            <LaterCard
+              icon={FileText}
+              title={t.later.documents}
+              text={t.later.documentsText}
+              step={6}
+            />
+          </div>
         </div>
       </div>
     </Page>

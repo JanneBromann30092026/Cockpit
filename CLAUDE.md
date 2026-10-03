@@ -104,7 +104,7 @@ Touch-first (iPad), wie Kompass:
 - [x] 2 Datenbank, Verschlüsselung & App-Sperre (aus Kompass)
 - [x] 3 Einstellungen & optionale KI (Grundlage: Key, Modell, Test)
 - [x] 4 Google-Anbindung & „Heute“ (Kalender, Gmail; Anmeldung auf dem iPad zuerst prüfen)
-- [ ] 5 Aufgaben (inkl. Anzeige in „Heute“)
+- [x] 5 Aufgaben (inkl. Anzeige in „Heute“)
 - [ ] 6 Verträge & Dokumente (PDF/Foto, Fristen, Kalender-Export, Fragen, KI-Auslesen)
 - [ ] 7 Reviews (Tag & Woche, Änderungen als Aufgaben, KI-Auswertung)
 - [ ] 8 Push-Mitteilungen (GitHub Actions)
@@ -163,3 +163,9 @@ Touch-first (iPad), wie Kompass:
   - Häufigster Einrichtungsfehler: `redirect_uri_mismatch` – die Weiterleitungs-URI muss exakt `https://jannebromann30092026.github.io/Cockpit/oauth.html` sein (großes C), Ursprung `https://jannebromann30092026.github.io`.
   - Client-ID des Cockpit-Projekts fest eingebaut (`GOOGLE_CLIENT_ID` in src/services/google/config.ts, öffentlich). Einstellungen → Google zeigt ohne Entwicklermodus nur Verbinden/Testen/Trennen; Einrichtungsanleitung und eigene Client-ID (leer = eingebaute) nur im Entwicklermodus. „Heute“ verbindet direkt.
   - E2E: nicht auf das Schließen des Anmeldefensters warten (die App schließt es selbst, evtl. bevor der Listener hängt) – stattdessen auf den App-Zustand („Verbunden bis“).
+- Schritt 5 (Aufgaben):
+  - Logik in src/core/tasks/tasks.ts (Gruppen Überfällig/Heute/Morgen/Nächste 7 Tage/Später/Ohne Datum, fällig = offen und Datum ≤ heute, Sortierung, Verschieben) und src/core/dates.ts (Kalenderdaten wie Kompass, plus `weekday`/`nextMonday` für Schritt 7). Aktionen in src/data/repositories/taskActions.ts: erledigen (`completedAt`), wieder öffnen, verschieben, bearbeiten, löschen mit „Rückgängig“ (gleiche ID, `restore`). Die generischen Repos liegen jetzt in repositories/records.ts (vermeidet einen Import-Kreis).
+  - Seite /tasks nach Kompass-Wiedervorlagen: Schnelleingabe (Enter; Chips Heute/Morgen/Wichtig gelten nur für die nächste Aufgabe), Gruppen, Abhaken per Kreis-Button oder Wischen nach rechts mit kurzem Erfolgsleuchten, „⋯“-Menü (Auf morgen, Eine Woche später, Datum wählen, Bearbeiten, Löschen), Editor als Seitenpanel/Bottom Sheet (`EditPanel` in app/shell), Erledigte eingeklappt (letzte 50). Taste `N` springt in die Schnelleingabe. Navigation zeigt die Zahl fälliger Aufgaben (gelbes Abzeichen, für Screenreader „3 fällig“).
+  - „Heute“: Karte „Fällige Aufgaben“ (abhaken, neue Aufgabe für heute, „Alle Aufgaben“; leer: nächste anstehende Aufgabe). Tagesüberblick bezieht Aufgaben ein: Wichtigstes = überfällige hohe Aufgabe > Mail mit Frage/Frist > heute fällige hohe Aufgabe > laufender/nächster Termin > andere fällige Aufgabe; dritter Satz „Postfach und Aufgaben“. Der Überblick erscheint auch ohne Google, sobald Aufgaben fällig sind („Termine siehst du, sobald Google verbunden ist“ statt Fehlertext). Claude bekommt fällige Aufgaben nur mit Titel, Priorität und Tagen überfällig (keine Notizen).
+  - Entwicklermodus „Demo-Daten“: 9 erfundene Aufgaben relativ zu heute (src/data/demo/tasks.ts, verschlüsselt, `demo: true`), „Demo-Daten löschen“ entfernt nur Demo-Einträge (auch die Testaufgaben aus „Verschlüsselung testen“).
+  - Tests: Unit (Daten, Gruppen, Reihenfolge, Verschieben, Aktionen inkl. Rückgängig und Demo, Überblick mit Aufgaben, KI-Anfrage); E2E mit fester Uhrzeit: Schnelleingabe, Gruppen, Abzeichen, „Heute“, verschlüsselt gespeichert, Erledigen + Rückgängig, Wischen, Editor/Verschieben/Löschen + Rückgängig, Taste N, Demo-Daten. Achtung: Nach der Schnelleingabe hat das Feld den Fokus – Ziffern-Kürzel greifen dort bewusst nicht.

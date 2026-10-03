@@ -1,12 +1,5 @@
 import { motion } from 'motion/react';
-import {
-  BookOpen,
-  FileText,
-  ListChecks,
-  NotebookPen,
-  Sparkles,
-  type LucideIcon,
-} from 'lucide-react';
+import { BookOpen, FileText, NotebookPen, Sparkles, type LucideIcon } from 'lucide-react';
 import { Badge, Surface } from '@/components/ui';
 import { Page } from '@/app/shell/Page';
 import { de } from '@/i18n/de';
@@ -16,7 +9,6 @@ export type ComingSoonKey = keyof typeof de.comingSoon.pages;
 
 /** Navigation label, icon and roadmap step of every page that is still a placeholder. */
 const PAGES: Record<ComingSoonKey, { title: string; icon: LucideIcon; step: number }> = {
-  tasks: { title: de.nav.tasks, icon: ListChecks, step: 5 },
   documents: { title: de.nav.documents, icon: FileText, step: 6 },
   reviews: { title: de.nav.reviews, icon: NotebookPen, step: 7 },
   library: { title: de.nav.library, icon: BookOpen, step: 9 },

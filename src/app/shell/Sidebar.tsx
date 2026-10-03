@@ -6,7 +6,9 @@ import { useSettings } from '@/features/settings/settingsStore';
 import { de } from '@/i18n/de';
 import { vault } from '@/services/vault';
 import { spring } from '@/styles/motion';
+import { NavBadge, NavBadgeText } from './NavBadge';
 import { navItems, type NavItem } from './navItems';
+import { useDueCount } from '@/features/tasks/useTasks';
 
 const EXPANDED_WIDTH = 264;
 const COLLAPSED_WIDTH = 84;
@@ -33,12 +35,15 @@ const itemClass = (isActive: boolean, collapsed: boolean) =>
 
 function SidebarLink({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
   const { to, label, icon: Icon } = item;
+  const due = useDueCount();
+  // Collapsed, the label replaces the content: it names the due tasks itself.
+  const collapsedLabel = to === '/tasks' && due > 0 ? `${label}, ${de.tasks.dueCount(due)}` : label;
   return (
     <MaybeTooltip show={collapsed} content={label}>
       <NavLink
         to={to}
         className={({ isActive }) => itemClass(isActive, collapsed)}
-        aria-label={collapsed ? label : undefined}
+        aria-label={collapsed ? collapsedLabel : undefined}
       >
         {({ isActive }) => (
           <>
@@ -51,6 +56,8 @@ function SidebarLink({ item, collapsed }: { item: NavItem; collapsed: boolean })
             )}
             <Icon size={22} aria-hidden className="relative shrink-0" />
             {!collapsed && <span className="relative flex-1 truncate">{label}</span>}
+            <NavBadge to={to} className={collapsed ? 'absolute top-0 right-2' : 'relative'} />
+            {!collapsed && <NavBadgeText to={to} />}
           </>
         )}
       </NavLink>

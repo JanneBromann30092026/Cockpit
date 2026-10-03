@@ -107,6 +107,27 @@ describe('today store', () => {
     expect(request.mails?.updates.every((mail) => mail.snippet === undefined)).toBe(true);
     expect(request.mails?.newsletters).toBe(2);
     expect(JSON.stringify(request)).not.toContain('@');
-    expect(daySummaryRequest(now, null, null)).toMatchObject({ events: null, mails: null });
+    expect(daySummaryRequest(now, null, null)).toMatchObject({
+      events: null,
+      mails: null,
+      tasks: [],
+    });
+    const withTasks = daySummaryRequest(now, null, null, [
+      {
+        title: 'Steuer',
+        status: 'open',
+        dueDate: '2026-10-03',
+        priority: 'high',
+        createdAt: '2026-10-01T08:00:00.000Z',
+      },
+      {
+        title: 'Notizen',
+        status: 'open',
+        priority: 'low',
+        createdAt: '2026-10-01T08:00:00.000Z',
+      },
+    ]);
+    // Only due tasks, with title, priority and how long overdue – no notes.
+    expect(withTasks.tasks).toEqual([{ title: 'Steuer', priority: 'hoch', overdueDays: 2 }]);
   });
 });

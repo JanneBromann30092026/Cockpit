@@ -47,7 +47,7 @@ test('navigation switches pages', async ({ page }) => {
   const problems = collectConsoleProblems(page);
   await openApp(page);
   const pages = [
-    ['Aufgaben', 'Kommt in Schritt 5'],
+    ['Aufgaben', 'Keine offenen Aufgaben'],
     ['Verträge', 'Kommt in Schritt 6'],
     ['Reviews', 'Kommt in Schritt 7'],
     ['Bibliothek', 'Kommt in Schritt 9'],
