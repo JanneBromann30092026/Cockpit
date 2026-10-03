@@ -300,6 +300,39 @@ async function devVault(page: Page) {
   await page.waitForTimeout(3200); // let the toasts disappear
 }
 
+/** Fresh invented tasks (the vault shot created demo test tasks before). */
+async function createDemoTasks(page: Page) {
+  await page.goto(`${PREVIEW_URL}#/dev/ui`);
+  const section = page.getByTestId('dev-section-demo');
+  await section.waitFor();
+  const remove = section.getByTestId('dev-demo-remove');
+  if (await remove.isEnabled()) {
+    await remove.click();
+    await section.getByTestId('dev-demo-count').filter({ hasText: '0 Demo-Einträge' }).waitFor();
+  }
+  await section.getByTestId('dev-demo-tasks').click();
+  await section.getByTestId('dev-demo-count').filter({ hasText: '9 Demo-Einträge' }).waitFor();
+}
+
+async function demoTasks(page: Page) {
+  await createDemoTasks(page);
+  await page.goto(`${PREVIEW_URL}#/tasks`);
+  await page.getByTestId('task-row').first().waitFor();
+  await page.waitForTimeout(3200); // let the toast disappear
+}
+
+async function taskEditor(page: Page) {
+  await page.getByTestId('tasks-add').click();
+  await page.getByTestId('task-title-input').fill('Bewerbung für das Praktikum abschicken');
+  const editor = page.getByTestId('task-editor');
+  await editor.getByRole('button', { name: 'Morgen', exact: true }).click();
+  await editor.getByRole('radio', { name: 'Hoch' }).click();
+}
+
+async function taskMenu(page: Page) {
+  await page.getByTestId('task-menu').first().click();
+}
+
 async function enableDevMode(page: Page) {
   await page.goto(`${PREVIEW_URL}#/settings`);
   const toggle = page.getByRole('switch', { name: 'Entwicklermodus' });
@@ -350,6 +383,9 @@ const SHOTS: Shot[] = [
   { route: '/settings', name: 'settings-ai', prepare: settingsAi },
   { route: '/dev/ui', name: 'dev-ui', prepare: enableDevMode, scroll: true },
   { route: '/dev/ui', name: 'dev-vault', prepare: devVault },
+  { route: '/dev/ui', name: 'tasks-demo', prepare: demoTasks, scroll: true },
+  { route: '/tasks', name: 'tasks-editor', prepare: taskEditor },
+  { route: '/tasks', name: 'tasks-menu', prepare: taskMenu },
   { route: '/dev/ui', name: 'dev-modal', prepare: click('Modal öffnen') },
   { route: '/dev/ui', name: 'dev-sheet', prepare: click('Bottom Sheet öffnen') },
   { route: '/dev/ui', name: 'dev-side-panel', prepare: click('Seitenpanel öffnen') },
@@ -420,6 +456,7 @@ async function captureToday(variant: { name: string; options: BrowserContextOpti
   await mockAnthropic(page);
   await quickSetup(page);
   await enableDevMode(page);
+  await createDemoTasks(page);
   await page.goto(`${PREVIEW_URL}#/settings`);
   await settingsAi(page);
   // Hash navigation only: a reload would lock the app and forget the demo day.

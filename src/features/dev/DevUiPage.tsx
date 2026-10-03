@@ -50,6 +50,7 @@ import { Page } from '@/app/shell/Page';
 import { useSettings } from '@/features/settings/settingsStore';
 import { de } from '@/i18n/de';
 import { loadDemoDay } from '@/features/today/todayStore';
+import { DemoDataSection } from './DemoDataSection';
 import { VaultDevSection } from './VaultDevSection';
 
 const t = de.dev;
@@ -480,6 +481,7 @@ export default function DevUiPage() {
   return (
     <Page title={t.title}>
       <div className="flex flex-col gap-8">
+        <DemoDataSection />
         <VaultDevSection />
         <Section id="today" title={t.today.title}>
           <p className="text-base text-fg-secondary">{t.today.hint}</p>

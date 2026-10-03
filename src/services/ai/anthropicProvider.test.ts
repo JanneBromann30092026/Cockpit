@@ -143,6 +143,7 @@ const day: DaySummaryRequest = {
   now: 'Montag, 5. Oktober 2026, 09:00 Uhr',
   events: [{ time: '10:00–11:30', title: 'Vorlesung' }],
   mails: { important: [], people: [], updates: [], newsletters: 3 },
+  tasks: [],
 };
 
 function answer(text: string, stopReason = 'end_turn'): Anthropic.Message {

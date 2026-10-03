@@ -4,6 +4,7 @@ import { cn } from '@/components/ui';
 import { useSettings } from '@/features/settings/settingsStore';
 import { de } from '@/i18n/de';
 import { spring } from '@/styles/motion';
+import { NavBadge, NavBadgeText } from './NavBadge';
 import { navItems } from './navItems';
 
 /** Narrow layout (< 900 px: portrait, Split View): tab bar at the bottom. */
@@ -37,9 +38,11 @@ export function TabBar() {
                     />
                   )}
                   <Icon size={22} aria-hidden className="relative" />
+                  <NavBadge to={to} className="absolute -top-1 right-1" />
                 </span>
                 {/* Split View can get narrow: long labels shorten instead of overflowing. */}
                 <span className="max-w-full truncate px-0.5">{label}</span>
+                <NavBadgeText to={to} />
               </>
             )}
           </NavLink>

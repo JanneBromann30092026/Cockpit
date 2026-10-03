@@ -9,8 +9,19 @@ export function formatTime(iso: string): string {
   return timeFormat.format(new Date(iso));
 }
 
+/** Which sources failed (as opposed to not being connected). */
+export interface SourceState {
+  calendarFailed: boolean;
+  gmailFailed: boolean;
+}
+
 function focusSentence(facts: OverviewFacts): string {
   const { focus } = facts;
+  if (focus.kind === 'task') {
+    return focus.overdueDays > 0
+      ? t.focusTaskOverdue(focus.task.title, focus.overdueDays)
+      : t.focusTaskToday(focus.task.title);
+  }
   if (focus.kind === 'mail') {
     const { senderName, subject, deadline, question } = focus.mail;
     const shown = subject || de.today.mails.noSubject;
@@ -27,9 +38,9 @@ function focusSentence(facts: OverviewFacts): string {
   return t.focusNone;
 }
 
-function scheduleSentence(facts: OverviewFacts): string {
+function scheduleSentence(facts: OverviewFacts, sources: SourceState): string {
   const schedule = facts.schedule;
-  if (!schedule) return t.scheduleUnknown;
+  if (!schedule) return sources.calendarFailed ? t.scheduleUnknown : t.scheduleNotConnected;
   if (schedule.count === 0) {
     return schedule.allDay > 0 ? t.scheduleAllDayOnly(schedule.allDay) : t.scheduleFree;
   }
@@ -46,16 +57,29 @@ function scheduleSentence(facts: OverviewFacts): string {
   return `${span}${t.scheduleTight(formatTime(tight.before.end), tight.before.title, tight.after.title)}`;
 }
 
-function mailSentence(facts: OverviewFacts): string {
-  const mails = facts.mails;
-  if (!mails) return t.mailsUnknown;
-  if (mails.total === 0) return t.mailsNone;
-  return `${t.mailsTotal(mails.total)}${mails.important > 0 ? t.mailsImportant(mails.important) : ''}${
-    mails.bulk > 0 ? t.mailsBulk(mails.bulk) : ''
-  }.`;
+/** Inbox and task list in one sentence. */
+function inboxSentence(facts: OverviewFacts, sources: SourceState): string {
+  const { mails, tasks } = facts;
+  const taskText = tasks.due > 0 ? t.tasks(tasks.due, tasks.overdue) : null;
+  if (!mails) {
+    if (sources.gmailFailed) return taskText ? t.mailsFailedAndTasks(taskText) : t.mailsUnknown;
+    return taskText ? t.onlyTasks(taskText) : t.noTasks;
+  }
+  if (mails.total === 0) return taskText ? t.noMailsButTasks(taskText) : t.mailsNone;
+  const mailText = `${t.mailsTotal(mails.total)}${
+    mails.important > 0 ? t.mailsImportant(mails.important) : ''
+  }`;
+  if (taskText) return t.mailsAndTasks(mailText, taskText);
+  return `${mailText}${mails.bulk > 0 ? t.mailsBulk(mails.bulk) : ''}.`;
 }
 
-/** The rule-based overview: what matters most, where it gets tight, what waits in the inbox. */
-export function overviewSentences(facts: OverviewFacts): [string, string, string] {
-  return [focusSentence(facts), scheduleSentence(facts), mailSentence(facts)];
+/**
+ * The rule-based overview: what matters most, where it gets tight, what waits in the inbox
+ * and on the task list.
+ */
+export function overviewSentences(
+  facts: OverviewFacts,
+  sources: SourceState = { calendarFailed: false, gmailFailed: false },
+): [string, string, string] {
+  return [focusSentence(facts), scheduleSentence(facts, sources), inboxSentence(facts, sources)];
 }

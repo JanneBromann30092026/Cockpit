@@ -4,6 +4,8 @@
  */
 import { create } from 'zustand';
 import type { CalendarEvent } from '@/core/calendar/events';
+import { daysBetween, localIsoDate } from '@/core/dates';
+import { dueTasks, type TaskInfo } from '@/core/tasks/tasks';
 import { mailGroup, type Mail } from '@/core/mail/classify';
 import type { DaySummaryMail, DaySummaryRequest } from '@/data/prompts/daySummary';
 import { demoEvents, demoMails } from '@/data/demo/today';
@@ -129,6 +131,8 @@ export function loadDemoDay(now = new Date()): void {
   });
 }
 
+const SUMMARY_PRIORITY = { high: 'hoch', medium: 'mittel', low: 'niedrig' } as const;
+
 const dateTimeFormat = new Intl.DateTimeFormat('de-DE', {
   weekday: 'long',
   day: 'numeric',
@@ -153,7 +157,9 @@ export function daySummaryRequest(
   now: Date,
   events: readonly CalendarEvent[] | null,
   mails: readonly Mail[] | null,
+  tasks: readonly TaskInfo[] = [],
 ): DaySummaryRequest {
+  const today = localIsoDate(now);
   const byGroup = (group: ReturnType<typeof mailGroup>) =>
     (mails ?? []).filter((mail) => mailGroup(mail) === group);
   return {
@@ -174,18 +180,27 @@ export function daySummaryRequest(
           newsletters: byGroup('bulk').length,
         }
       : null,
+    tasks: dueTasks(tasks, today).map((task) => ({
+      title: task.title,
+      priority: SUMMARY_PRIORITY[task.priority],
+      overdueDays: Math.max(0, daysBetween(task.dueDate ?? today, today)),
+    })),
   };
 }
 
 /** Sends the overview data to Claude (only on an explicit tap). */
-export async function summarizeToday(config: AiConfig, now = new Date()): Promise<void> {
+export async function summarizeToday(
+  config: AiConfig,
+  tasks: readonly TaskInfo[],
+  now = new Date(),
+): Promise<void> {
   const { events, mails } = useToday.getState();
   summaryController?.abort();
   const current = new AbortController();
   summaryController = current;
   useToday.setState({ summary: { status: 'loading' } });
   try {
-    const result = await summarizeDayWithAi(config, daySummaryRequest(now, events, mails), {
+    const result = await summarizeDayWithAi(config, daySummaryRequest(now, events, mails, tasks), {
       signal: current.signal,
     });
     if (summaryController !== current) return;

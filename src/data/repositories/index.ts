@@ -1,18 +1,6 @@
-import {
-  brandInputSchema,
-  documentInputSchema,
-  libraryInputSchema,
-  reviewInputSchema,
-  taskInputSchema,
-} from '../schemas';
-import { createRecordRepo } from './recordsRepo';
-
 export { metaRepo, VaultExistsError } from './metaRepo';
 export { secretsRepo } from './secretsRepo';
 export { settingsRepo } from './settingsRepo';
 
-export const tasksRepo = createRecordRepo('tasks', taskInputSchema);
-export const documentsRepo = createRecordRepo('documents', documentInputSchema);
-export const reviewsRepo = createRecordRepo('reviews', reviewInputSchema);
-export const libraryRepo = createRecordRepo('library', libraryInputSchema);
-export const brandRepo = createRecordRepo('brand', brandInputSchema);
+export { brandRepo, documentsRepo, libraryRepo, reviewsRepo, tasksRepo } from './records';
+export { demoActions, taskActions, type TaskInput, type TaskPatch } from './taskActions';
