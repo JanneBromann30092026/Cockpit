@@ -65,6 +65,76 @@ export const de = {
     devHint: (password: string) => `Entwicklermodus · Testpasswort: ${password}`,
     unavailable: 'Cockpit kann nicht starten',
   },
+  google: {
+    title: 'Google (Kalender & Gmail)',
+    intro:
+      'Cockpit liest Termine und Mails nur – nichts wird geändert oder gesendet. Die Daten bleiben nur im Arbeitsspeicher und werden nicht gespeichert.',
+    status: {
+      disconnected: 'Nicht verbunden',
+      connecting: 'Wird verbunden …',
+      connected: 'Verbunden',
+    },
+    connectedUntil: (time: string) => `Verbunden bis ${time} Uhr`,
+    clientId: 'OAuth-Client-ID',
+    clientIdHint:
+      'Aus der Google Cloud Console (Typ „Webanwendung“). Sie ist öffentlich und kein Geheimnis.',
+    clientIdPlaceholder: '1234567890-abc….apps.googleusercontent.com',
+    clientIdInvalid:
+      'Das sieht nicht nach einer Client-ID aus (endet auf .apps.googleusercontent.com).',
+    clientIdSaved: 'Client-ID gespeichert',
+    connectPopup: 'Mit Google verbinden',
+    connectRedirect: 'Alternative: per Weiterleitung',
+    connectHint:
+      'Test für das iPad: Probiere zuerst „Mit Google verbinden“. Klappt das nicht, die Alternative per Weiterleitung – danach entsperrst du Cockpit einmal neu.',
+    disconnect: 'Trennen',
+    test: 'Zugriff testen',
+    testing: 'Wird geprüft …',
+    calendarOk: (count: number) =>
+      count === 1 ? 'Kalender: 1 Kalender gefunden' : `Kalender: ${count} Kalender gefunden`,
+    gmailOk: (email: string) => `Gmail: verbunden als ${email}`,
+    calendarFailed: (reason: string) => `Kalender: ${reason}`,
+    gmailFailed: (reason: string) => `Gmail: ${reason}`,
+    setupTitle: 'So richtest du Google ein (einmalig)',
+    setupSteps: [
+      'console.cloud.google.com öffnen und ein Projekt „Cockpit“ anlegen.',
+      'Unter „APIs & Dienste“ → „Bibliothek“ die „Google Calendar API“ und die „Gmail API“ aktivieren.',
+      'Unter „Google Auth Platform“ (OAuth-Zustimmungsbildschirm) die App „Cockpit“ anlegen: Zielgruppe „Extern“, Status „Test“, deine Gmail-Adresse als Testnutzer eintragen.',
+      'Unter „Clients“ einen Client vom Typ „Webanwendung“ erstellen und die beiden Adressen unten eintragen.',
+      'Die angezeigte Client-ID kopieren und oben einfügen.',
+    ],
+    originLabel: 'Autorisierter JavaScript-Ursprung',
+    redirectLabel: 'Autorisierte Weiterleitungs-URI',
+    copy: 'Kopieren',
+    copied: 'Kopiert',
+    copyFailed: 'Kopieren nicht möglich – bitte lange auf den Text tippen.',
+    unverifiedHint:
+      'Google zeigt beim Verbinden „Google hat diese App nicht überprüft“ – das ist bei einer eigenen App im Testmodus normal: „Weiter“ wählen und beide Häkchen (Kalender, Gmail) setzen.',
+    errors: {
+      NO_CLIENT_ID: 'Bitte zuerst die OAuth-Client-ID eintragen.',
+      POPUP_BLOCKED: 'Das Anmeldefenster wurde blockiert. Bitte noch einmal tippen.',
+      CANCELLED: 'Anmeldung abgebrochen.',
+      DENIED: 'Du hast den Zugriff nicht erlaubt.',
+      STATE_MISMATCH:
+        'Die Anmeldung passte nicht zur Anfrage und wurde verworfen. Bitte erneut verbinden.',
+      MISSING_SCOPES: 'Bitte beide Berechtigungen erlauben (Kalender und Gmail lesen).',
+      AUTH_FAILED: 'Die Anmeldung hat nicht geklappt. Bitte erneut versuchen.',
+      NOT_CONNECTED: 'Nicht mit Google verbunden.',
+      EXPIRED: 'Die Verbindung ist abgelaufen. Bitte neu verbinden.',
+      API_DISABLED: 'Die API ist im Google-Cloud-Projekt nicht aktiviert.',
+      FORBIDDEN: 'Google hat den Zugriff verweigert.',
+      RATE_LIMIT: 'Zu viele Anfragen – bitte kurz warten.',
+      OFFLINE: 'Du bist offline.',
+      NETWORK: 'Google ist gerade nicht erreichbar.',
+      INVALID_RESPONSE: 'Unerwartete Antwort von Google.',
+      API_ERROR: 'Google hat einen Fehler gemeldet.',
+    },
+    callback: {
+      title: 'Cockpit',
+      done: 'Anmeldung abgeschlossen – du kannst dieses Fenster schließen.',
+      failed: 'Die Anmeldung hat nicht geklappt. Du kannst dieses Fenster schließen.',
+      returning: 'Zurück zu Cockpit …',
+    },
+  },
   comingSoon: {
     badge: (step: number) => `Kommt in Schritt ${step}`,
     pages: {

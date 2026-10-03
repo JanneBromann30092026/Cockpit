@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { create } from 'zustand';
 import { DEFAULT_LOCK_AFTER_MINUTES, LOCK_AFTER_MINUTES } from '@/core/lock';
 import { settingsRepo } from '@/data/repositories';
+import { GOOGLE_CLIENT_ID_PATTERN } from '@/core/google/oauth';
 import { AI_MODEL_PATTERN, DEFAULT_AI_MODEL } from '@/services/ai/config';
 
 export const THEME_PREFERENCES = ['system', 'light', 'dark'] as const;
@@ -24,6 +25,8 @@ const schemas = {
   // Optional AI (off by default; the key itself lives encrypted in the secrets table)
   aiEnabled: z.boolean(),
   aiModel: z.string().trim().regex(AI_MODEL_PATTERN),
+  // Google: public OAuth client ID ("" until it is set up)
+  googleClientId: z.union([z.literal(''), z.string().trim().regex(GOOGLE_CLIENT_ID_PATTERN)]),
   // Developer
   devMode: z.boolean(),
 };
@@ -38,6 +41,7 @@ export const SETTINGS_DEFAULTS: SettingsValues = {
   lockAfterMinutes: DEFAULT_LOCK_AFTER_MINUTES,
   aiEnabled: false,
   aiModel: DEFAULT_AI_MODEL,
+  googleClientId: '',
   devMode: false,
 };
 

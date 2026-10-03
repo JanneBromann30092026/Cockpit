@@ -3,7 +3,7 @@
  * Usage: npm run screenshots  →  screenshots/*.png (SHOTS=settings for one group)
  */
 import { mkdirSync } from 'node:fs';
-import { chromium, type BrowserContextOptions, type Page } from '@playwright/test';
+import { chromium, type BrowserContextOptions, type Page, type Route } from '@playwright/test';
 import { preview } from 'vite';
 import { IPAD_LANDSCAPE, IPAD_PORTRAIT, PREVIEW_URL, TEST_PASSWORD } from './ipad.ts';
 
@@ -203,6 +203,69 @@ async function settingsAi(page: Page) {
   await ai.evaluate((element) => element.scrollIntoView({ block: 'start' }));
 }
 
+/** Mocked Google sign-in and APIs for the screenshots (no real account). */
+async function mockGoogle(page: Page) {
+  const cors = {
+    'access-control-allow-origin': '*',
+    'access-control-allow-headers': '*',
+    'access-control-allow-methods': 'GET, POST, OPTIONS',
+  };
+  await page.context().route('https://accounts.google.com/**', (route) => {
+    const url = new URL(route.request().url());
+    const fragment = new URLSearchParams({
+      state: url.searchParams.get('state') ?? '',
+      access_token: 'ya29.screenshot',
+      token_type: 'Bearer',
+      expires_in: '3599',
+      scope: url.searchParams.get('scope') ?? '',
+    });
+    return route.fulfill({
+      status: 302,
+      headers: { location: `${url.searchParams.get('redirect_uri')}#${fragment.toString()}` },
+    });
+  });
+  const api = (body: unknown) => (route: Route) =>
+    route.request().method() === 'OPTIONS'
+      ? route.fulfill({ status: 204, headers: cors })
+      : route.fulfill({
+          status: 200,
+          headers: { ...cors, 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+  await page
+    .context()
+    .route(
+      'https://www.googleapis.com/**',
+      api({ items: [{ id: 'primary', primary: true }, { id: 'feiertage' }] }),
+    );
+  await page
+    .context()
+    .route('https://gmail.googleapis.com/**', api({ emailAddress: 'du@example.com' }));
+}
+
+async function settingsGoogleSetup(page: Page) {
+  const google = page.getByTestId('settings-google');
+  await google.evaluate((element) => element.scrollIntoView({ block: 'start' }));
+  await google.getByRole('button', { name: /So richtest du Google ein/ }).click();
+  await page.waitForTimeout(300);
+}
+
+async function settingsGoogleConnected(page: Page) {
+  const google = page.getByTestId('settings-google');
+  const field = google.getByTestId('google-client-id');
+  if (!(await field.inputValue())) {
+    await field.fill('123456789012-beispiel.apps.googleusercontent.com');
+    await field.press('Enter');
+  }
+  const popup = page.context().waitForEvent('page');
+  await google.getByRole('button', { name: 'Mit Google verbinden' }).click();
+  await (await popup).waitForEvent('close');
+  await google.getByRole('button', { name: 'Zugriff testen' }).click();
+  await google.getByTestId('google-test-result').waitFor();
+  await page.waitForTimeout(3200); // let the toasts disappear
+  await google.evaluate((element) => element.scrollIntoView({ block: 'start' }));
+}
+
 async function settingsAiOff(page: Page) {
   await page.getByTestId('settings-ai').evaluate((element) => {
     element.scrollIntoView({ block: 'start' });
@@ -266,6 +329,8 @@ const SHOTS: Shot[] = [
   { route: '/settings', name: 'settings', scroll: true },
   { route: '/settings', name: 'settings-security', prepare: settingsSecurity },
   { route: '/settings', name: 'settings-password', prepare: changePassword },
+  { route: '/settings', name: 'settings-google-setup', prepare: settingsGoogleSetup },
+  { route: '/settings', name: 'settings-google', prepare: settingsGoogleConnected },
   { route: '/settings', name: 'settings-ai-off', prepare: settingsAiOff },
   { route: '/settings', name: 'settings-ai', prepare: settingsAi },
   { route: '/dev/ui', name: 'dev-ui', prepare: enableDevMode, scroll: true },
@@ -350,6 +415,7 @@ try {
     await context.addInitScript(simulatedKeyboardScript);
     const page = await context.newPage();
     await mockAnthropic(page);
+    await mockGoogle(page);
     const wide = (variant.options.viewport?.width ?? 0) >= 900;
     const split = variant.name.startsWith('split');
     if (!ONLY || ONLY.startsWith('lock')) {
