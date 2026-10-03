@@ -170,18 +170,34 @@ async function mockAnthropic(page: Page) {
     'access-control-allow-headers': '*',
     'access-control-allow-methods': 'GET, POST, OPTIONS',
   };
+  const model = {
+    type: 'model',
+    id: 'claude-haiku-4-5-20251001',
+    display_name: 'Claude Haiku 4.5',
+    created_at: '2025-10-01T00:00:00Z',
+  };
+  const message = {
+    id: 'msg_screenshot',
+    type: 'message',
+    role: 'assistant',
+    model: 'claude-haiku-4-5-20251001',
+    content: [
+      {
+        type: 'text',
+        text: 'Am wichtigsten sind heute Lenas Folien fürs Kundenportal – sie braucht sie bis 13 Uhr. Eng wird es nach dem Projektmeeting, bis zum Videodreh bleiben nur zehn Minuten. Im Postfach warten zwei Mails mit Frist, der Rest kann bis heute Abend liegen bleiben.',
+      },
+    ],
+    stop_reason: 'end_turn',
+    stop_sequence: null,
+    usage: { input_tokens: 600, output_tokens: 70 },
+  };
   await page.route('https://api.anthropic.com/**', (route) =>
     route.request().method() === 'OPTIONS'
       ? route.fulfill({ status: 204, headers: cors })
       : route.fulfill({
           status: 200,
           headers: { ...cors, 'content-type': 'application/json' },
-          body: JSON.stringify({
-            type: 'model',
-            id: 'claude-haiku-4-5-20251001',
-            display_name: 'Claude Haiku 4.5',
-            created_at: '2025-10-01T00:00:00Z',
-          }),
+          body: JSON.stringify(route.request().method() === 'POST' ? message : model),
         }),
   );
 }
@@ -370,6 +386,60 @@ async function capture(page: Page, name: string) {
   console.log(`✓ ${file}`);
 }
 
+async function quickSetup(page: Page) {
+  await page.goto(PREVIEW_URL, { waitUntil: 'networkidle' });
+  await page.getByTestId('setup-password').fill(TEST_PASSWORD);
+  await page.getByTestId('setup-repeat').fill(TEST_PASSWORD);
+  await page.getByRole('switch', { name: /Verstanden/ }).click();
+  await page.getByTestId('setup-submit').click();
+  await page.getByTestId('lock-screen').waitFor({ state: 'detached' });
+}
+
+/** Scrolls the page in viewport-sized steps and captures every part after the first. */
+async function captureScrolled(page: Page, name: string, variant: string) {
+  const container = page.locator('[data-scroll-container]');
+  for (let part = 2; part <= 4; part += 1) {
+    const moved = await container.evaluate((element) => {
+      const before = element.scrollTop;
+      element.scrollTop += element.clientHeight - 80;
+      return element.scrollTop !== before;
+    });
+    if (!moved) break;
+    await page.waitForTimeout(300);
+    await capture(page, `${name}-${part}-${variant}`);
+  }
+}
+
+/**
+ * "Heute" with the invented demo day at a fixed time (Monday 10:20), once rule-based and
+ * once formulated by (mocked) Claude. Own context: the fixed clock stays out of the lock shots.
+ */
+async function captureToday(variant: { name: string; options: BrowserContextOptions }) {
+  const context = await browser.newContext({ ...variant.options, serviceWorkers: 'block' });
+  const page = await context.newPage();
+  await page.clock.setFixedTime(new Date('2026-10-05T10:20:00+02:00'));
+  await mockAnthropic(page);
+  await quickSetup(page);
+  await enableDevMode(page);
+  await page.goto(`${PREVIEW_URL}#/settings`);
+  await settingsAi(page);
+  // Hash navigation only: a reload would lock the app and forget the demo day.
+  await page.goto(`${PREVIEW_URL}#/today`);
+  await page.getByTestId('today-demo').click();
+  await page.getByTestId('today-overview').waitFor();
+  await page.waitForTimeout(900);
+  await capture(page, `today-demo-${variant.name}`);
+  await captureScrolled(page, 'today-demo', variant.name);
+  await page.locator('[data-scroll-container]').evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  await page.getByTestId('summarize').click();
+  await page.getByTestId('overview-source').filter({ hasText: '(Claude)' }).waitFor();
+  await page.waitForTimeout(900);
+  await capture(page, `today-claude-${variant.name}`);
+  await context.close();
+}
+
 /** Icon preview: home screen icon, maskable icon in a circle, tab icon and startup images. */
 async function captureIconPreview() {
   const context = await browser.newContext({ deviceScaleFactor: 2 });
@@ -421,12 +491,7 @@ try {
     if (!ONLY || ONLY.startsWith('lock')) {
       await captureSetup(page, variant.name);
     } else {
-      await page.goto(PREVIEW_URL, { waitUntil: 'networkidle' });
-      await page.getByTestId('setup-password').fill(TEST_PASSWORD);
-      await page.getByTestId('setup-repeat').fill(TEST_PASSWORD);
-      await page.getByRole('switch', { name: /Verstanden/ }).click();
-      await page.getByTestId('setup-submit').click();
-      await page.getByTestId('lock-screen').waitFor({ state: 'detached' });
+      await quickSetup(page);
     }
     // A filtered run still needs the developer mode (normally enabled by the dev-ui shot).
     if (ONLY) await enableDevMode(page);
@@ -462,6 +527,7 @@ try {
     }
     if (!split && (!ONLY || ONLY.startsWith('lock'))) await captureUnlock(page, variant.name);
     await context.close();
+    if (!ONLY || ONLY.startsWith('today')) await captureToday(variant);
   }
 } finally {
   await browser.close();

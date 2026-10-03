@@ -1,6 +1,18 @@
 import Anthropic from '@anthropic-ai/sdk';
+import {
+  buildDaySummaryMessage,
+  DAY_SUMMARY_SYSTEM_PROMPT,
+  parseDaySummary,
+  type DaySummaryRequest,
+} from '@/data/prompts/daySummary';
 import { AI_TIMEOUT_MS } from './config';
-import { AiError, type AiCallOptions, type AiProvider, type ConnectionTestResult } from './types';
+import {
+  AiError,
+  type AiCallOptions,
+  type AiProvider,
+  type ConnectionTestResult,
+  type DaySummaryResult,
+} from './types';
 
 interface RequestOptions {
   signal?: AbortSignal;
@@ -10,6 +22,20 @@ interface RequestOptions {
 
 /** The part of the SDK client the provider uses (injectable for tests). */
 export interface AnthropicClientLike {
+  messages: {
+    create(
+      params: Anthropic.MessageCreateParamsNonStreaming,
+      options?: RequestOptions,
+    ): Promise<Anthropic.Message>;
+  };
+  beta: {
+    messages: {
+      create(
+        params: Anthropic.Beta.MessageCreateParamsNonStreaming,
+        options?: RequestOptions,
+      ): Promise<Anthropic.Beta.BetaMessage>;
+    };
+  };
   models: {
     retrieve(
       modelId: string,
@@ -27,6 +53,18 @@ export interface AnthropicProviderOptions {
   isOnline?: () => boolean;
   createClient?: (apiKey: string) => AnthropicClientLike;
 }
+
+/**
+ * Models that can decline a request through their safety classifiers: they get the
+ * server-side fallback, so a refused request is answered by a fallback model instead.
+ */
+const FALLBACK_MODELS = /^claude-(fable-5-1|opus-5-5|sonnet-5-5)/;
+const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
+
+/** Thinking models (always on for Opus 5.5) need room beyond the short answer. */
+const SUMMARY_MAX_TOKENS = 4096;
+/** Writing takes longer than the model lookup of the connection test. */
+const SUMMARY_TIMEOUT_MS = 45_000;
 
 function defaultClient(apiKey: string): AnthropicClientLike {
   // The key comes from this device's encrypted storage; requests go straight to
@@ -88,6 +126,7 @@ export class AnthropicProvider implements AiProvider {
   private async call<T>(
     run: (options: RequestOptions) => Promise<T>,
     outer?: AbortSignal,
+    timeoutMs: number = this.timeoutMs,
   ): Promise<T> {
     if (!this.apiKey) throw new AiError('NO_API_KEY');
     if (!this.isOnline()) throw new AiError('OFFLINE');
@@ -98,17 +137,59 @@ export class AnthropicProvider implements AiProvider {
     const timer = setTimeout(() => {
       timedOut = true;
       controller.abort();
-    }, this.timeoutMs);
+    }, timeoutMs);
     const onOuterAbort = () => controller.abort();
     outer?.addEventListener('abort', onOuterAbort, { once: true });
     try {
-      return await run({ signal: controller.signal, timeout: this.timeoutMs, maxRetries: 1 });
+      return await run({ signal: controller.signal, timeout: timeoutMs, maxRetries: 1 });
     } catch (error: unknown) {
       throw toAiError(error, timedOut, this.isOnline());
     } finally {
       clearTimeout(timer);
       outer?.removeEventListener('abort', onOuterAbort);
     }
+  }
+
+  /** Sends the request; refusable models get the server-side fallback. */
+  private create(
+    params: Anthropic.MessageCreateParamsNonStreaming,
+    options: RequestOptions,
+  ): Promise<Anthropic.Message | Anthropic.Beta.BetaMessage> {
+    if (!FALLBACK_MODELS.test(this.model)) return this.client.messages.create(params, options);
+    return this.client.beta.messages.create(
+      { ...params, betas: [FALLBACK_BETA], fallbacks: 'default' },
+      options,
+    );
+  }
+
+  /** The day in three sentences; only the data of the overview is sent. */
+  async summarizeDay(
+    input: DaySummaryRequest,
+    options: AiCallOptions = {},
+  ): Promise<DaySummaryResult> {
+    const timeoutMs = Math.max(this.timeoutMs, SUMMARY_TIMEOUT_MS);
+    const message = await this.call(
+      (requestOptions) =>
+        this.create(
+          {
+            model: this.model,
+            max_tokens: SUMMARY_MAX_TOKENS,
+            system: DAY_SUMMARY_SYSTEM_PROMPT,
+            messages: [{ role: 'user', content: buildDaySummaryMessage(input) }],
+          },
+          requestOptions,
+        ),
+      options.signal,
+      timeoutMs,
+    );
+    // Check why the model stopped before reading the content.
+    if (message.stop_reason === 'refusal') throw new AiError('REFUSED');
+    const text = message.content
+      .flatMap((block) => (block.type === 'text' ? [block.text] : []))
+      .join(' ');
+    const sentences = parseDaySummary(text);
+    if (sentences.length === 0) throw new AiError('INVALID_RESPONSE');
+    return { sentences, model: message.model || this.model };
   }
 
   /** Looks up the configured model: validates key, network and model without generating tokens. */

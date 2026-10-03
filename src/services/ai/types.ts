@@ -1,7 +1,15 @@
+import type { DaySummaryRequest } from '@/data/prompts/daySummary';
+
 export interface ConnectionTestResult {
   model: string;
   /** Human-readable model name, e.g. "Claude Haiku 4.5". */
   displayName: string;
+}
+
+export interface DaySummaryResult {
+  /** At most three sentences, written by Claude. */
+  sentences: string[];
+  model: string;
 }
 
 export interface AiCallOptions {
@@ -18,6 +26,8 @@ export interface AiProvider {
   readonly model: string;
   /** Cheap check that key, network and model work (no tokens are generated). */
   testConnection(options?: AiCallOptions): Promise<ConnectionTestResult>;
+  /** The day in three sentences from the given events and mails (only on explicit tap). */
+  summarizeDay(input: DaySummaryRequest, options?: AiCallOptions): Promise<DaySummaryResult>;
 }
 
 export const AI_ERROR_CODES = [
@@ -32,6 +42,8 @@ export const AI_ERROR_CODES = [
   'OVERLOADED',
   'AUTH',
   'MODEL_NOT_FOUND',
+  'REFUSED',
+  'INVALID_RESPONSE',
   'API_ERROR',
 ] as const;
 export type AiErrorCode = (typeof AI_ERROR_CODES)[number];
