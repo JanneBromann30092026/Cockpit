@@ -4,9 +4,12 @@ export const OAUTH_CALLBACK_FILE = 'oauth.html';
 /** postMessage / BroadcastChannel name for results from the sign-in window. */
 export const OAUTH_MESSAGE_TYPE = 'cockpit-google-oauth';
 
-/** sessionStorage keys of the full-page redirect variant (survive the reload, per tab). */
-export const REDIRECT_STATE_KEY = 'cockpit.googleOAuthState';
-export const REDIRECT_RESULT_KEY = 'cockpit.googleOAuthResult';
+/**
+ * OAuth client ID of the Cockpit project in the Google Cloud console (type "Web
+ * application"). Public by design – a client secret never belongs in the app.
+ */
+export const GOOGLE_CLIENT_ID =
+  '435425521293-m9kr2n2kdb4n88m7pkugdhd8nfdk26ro.apps.googleusercontent.com';
 
 export const GOOGLE_REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
 

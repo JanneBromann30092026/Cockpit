@@ -1,5 +1,4 @@
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import {
   CalendarDays,
@@ -10,7 +9,6 @@ import {
   Mail as MailIcon,
   MapPin,
   RefreshCw,
-  Settings,
   Sparkles,
   X,
   type LucideIcon,
@@ -22,7 +20,7 @@ import { Page } from '@/app/shell/Page';
 import { eventTiming, localDate, tightSpots, type CalendarEvent } from '@/core/calendar/events';
 import { mailGroup, type Mail, type MailGroup } from '@/core/mail/classify';
 import { overviewFacts } from '@/core/today/overview';
-import { useSettings } from '@/features/settings/settingsStore';
+import { useGoogleClientId, useSettings } from '@/features/settings/settingsStore';
 import { de } from '@/i18n/de';
 import {
   connectWithPopup,
@@ -445,16 +443,10 @@ function OverviewCard({ now }: { now: Date }) {
 }
 
 function ConnectCard({ error }: { error: GoogleErrorCode | null }) {
-  const clientId = useSettings((s) => s.googleClientId);
+  const clientId = useGoogleClientId();
   const devMode = useSettings((s) => s.devMode);
   const status = useGoogleSession((s) => s.status);
-  const navigate = useNavigate();
-  const text =
-    error === 'EXPIRED'
-      ? `${t.connect.expired} ${t.connect.text}`
-      : clientId
-        ? t.connect.text
-        : `${t.connect.text} ${t.connect.setupFirst}`;
+  const text = error === 'EXPIRED' ? `${t.connect.expired} ${t.connect.text}` : t.connect.text;
 
   return (
     <Surface data-testid="today-connect">
@@ -465,21 +457,12 @@ function ConnectCard({ error }: { error: GoogleErrorCode | null }) {
         action={
           <div className="flex flex-col items-center gap-3">
             <div className="flex flex-wrap justify-center gap-2">
-              {clientId ? (
-                <Button
-                  icon={LogIn}
-                  loading={status === 'connecting'}
-                  onClick={() => connectWithPopup(clientId)}
-                >
-                  {error === 'EXPIRED' ? t.connect.reconnect : t.connect.button}
-                </Button>
-              ) : null}
               <Button
-                variant={clientId ? 'ghost' : 'primary'}
-                icon={Settings}
-                onClick={() => void navigate('/settings')}
+                icon={LogIn}
+                loading={status === 'connecting'}
+                onClick={() => connectWithPopup(clientId)}
               >
-                {t.connect.toSettings}
+                {error === 'EXPIRED' ? t.connect.reconnect : t.connect.button}
               </Button>
               {devMode && (
                 <Button variant="secondary" onClick={() => loadDemoDay()} data-testid="today-demo">
@@ -500,7 +483,7 @@ function ConnectCard({ error }: { error: GoogleErrorCode | null }) {
 }
 
 function ExpiredBanner() {
-  const clientId = useSettings((s) => s.googleClientId);
+  const clientId = useGoogleClientId();
   return (
     <div
       className="flex flex-wrap items-center gap-3 rounded-lg bg-warning-soft px-4 py-3"

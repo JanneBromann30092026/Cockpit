@@ -1,7 +1,8 @@
 import { expect, test, type BrowserContext, type Page, type Route } from '@playwright/test';
 import { enableDevMode, openApp, storageDump, unlock } from './vault.ts';
 
-const CLIENT_ID = '123456789012-testclient.apps.googleusercontent.com';
+/** The client ID built into the app (public). */
+const CLIENT_ID = '435425521293-m9kr2n2kdb4n88m7pkugdhd8nfdk26ro.apps.googleusercontent.com';
 const TOKEN = 'ya29.today-token-0123456789';
 const KEY = 'sk-ant-api03-test-0123456789abcdefghijklmnopqrstuvwxyz';
 /** Monday, 5 October 2026, 10:20 in Berlin (the iPad profiles use Europe/Berlin). */
@@ -168,6 +169,8 @@ function gmailMessage(mail: FakeMail) {
 type Reply = 'ok' | 'disabled' | 'expired';
 
 interface GoogleMock {
+  /** Sign-in requests to accounts.google.com. */
+  auth: URL[];
   calls: { url: URL; auth: string | null }[];
   calendar: Reply;
   gmail: Reply;
@@ -175,9 +178,10 @@ interface GoogleMock {
 
 /** Fake sign-in (always granted) and fake Calendar/Gmail APIs with CORS preflight. */
 async function mockGoogle(context: BrowserContext): Promise<GoogleMock> {
-  const mock: GoogleMock = { calls: [], calendar: 'ok', gmail: 'ok' };
+  const mock: GoogleMock = { auth: [], calls: [], calendar: 'ok', gmail: 'ok' };
   await context.route('https://accounts.google.com/**', async (route: Route) => {
     const url = new URL(route.request().url());
+    mock.auth.push(url);
     const fragment = new URLSearchParams({
       state: url.searchParams.get('state') ?? '',
       access_token: TOKEN,
@@ -238,13 +242,11 @@ async function mockGoogle(context: BrowserContext): Promise<GoogleMock> {
 async function connectGoogle(page: Page, context: BrowserContext) {
   await page.goto('./#/settings');
   const google = page.getByTestId('settings-google');
-  const field = google.getByTestId('google-client-id');
-  await field.fill(CLIENT_ID);
-  await field.press('Enter');
-  await expect(page.getByText('Client-ID gespeichert')).toBeVisible();
   const popup = context.waitForEvent('page');
   await google.getByRole('button', { name: 'Mit Google verbinden' }).click();
-  await (await popup).waitForEvent('close');
+  // No wait for the window to close: the app closes it as soon as the result arrives,
+  // possibly before a listener could be attached.
+  await popup;
   await expect(google.getByTestId('google-status')).toContainText('Verbunden bis');
 }
 
@@ -256,20 +258,17 @@ test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(NOW);
 });
 
-test('without Google: a hint to the settings, the demo day in developer mode', async ({
+test('without Google: connect right here, the demo day in developer mode', async ({
   page,
   context,
 }) => {
   const mock = await mockGoogle(context);
   await openApp(page, '/today');
   const connect = page.getByTestId('today-connect');
-  await expect(connect).toContainText('Richte Google zuerst in den Einstellungen ein.');
+  await expect(connect).toContainText('Verbinde Google (nur lesend)');
   await expect(page.getByTestId('today-date')).toHaveText('Montag, 5. Oktober');
   await expect(page.getByTestId('today-refresh')).toHaveCount(0);
   await expect(page.getByTestId('today-demo')).toHaveCount(0);
-  await connect.getByRole('button', { name: 'Zu den Einstellungen' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Einstellungen' })).toBeVisible();
-
   await enableDevMode(page);
   await page.goto('./#/today');
   await page.getByTestId('today-demo').click();
@@ -279,6 +278,16 @@ test('without Google: a hint to the settings, the demo day in developer mode', a
   await page.getByRole('button', { name: 'Demo beenden' }).click();
   await expect(page.getByTestId('today-connect')).toBeVisible();
   expect(mock.calls).toEqual([]);
+
+  // Connecting from "Heute" uses the built-in client ID and loads the day.
+  const popup = context.waitForEvent('page');
+  await page
+    .getByTestId('today-connect')
+    .getByRole('button', { name: 'Mit Google verbinden' })
+    .click();
+  await popup;
+  await expect(events(page).getByTestId('event')).toHaveCount(4);
+  expect(mock.auth[0]?.searchParams.get('client_id')).toBe(CLIENT_ID);
 });
 
 test('events and mails from Google: sorted, grouped, only in memory', async ({ page, context }) => {
@@ -408,7 +417,7 @@ test('problems are shown per source; an expired connection keeps the data', asyn
   mock.calendar = 'ok';
   const popup = context.waitForEvent('page');
   await page.getByRole('button', { name: 'Neu verbinden' }).click();
-  await (await popup).waitForEvent('close');
+  await popup;
   await expect(page.getByTestId('today-expired')).toHaveCount(0);
   await expect(mails(page).getByTestId('mail').first()).toContainText('Lena Berg');
   await expect(events(page).getByTestId('event')).toHaveCount(4);

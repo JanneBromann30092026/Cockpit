@@ -14,9 +14,6 @@ export const GOOGLE_SCOPES = [
 /** OAuth client IDs of type "Web application", e.g. 1234-abc.apps.googleusercontent.com. */
 export const GOOGLE_CLIENT_ID_PATTERN = /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/;
 
-/** Prefix of the state of a full-page redirect (the result comes back after a reload). */
-export const REDIRECT_STATE_PREFIX = 'r.';
-
 export interface AuthUrlInput {
   clientId: string;
   redirectUri: string;

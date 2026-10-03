@@ -1,7 +1,9 @@
 import { expect, test, type BrowserContext, type Page, type Route } from '@playwright/test';
-import { openApp, storageDump, unlock } from './vault.ts';
+import { enableDevMode, openApp, storageDump } from './vault.ts';
 
-const CLIENT_ID = '123456789012-testclient.apps.googleusercontent.com';
+/** The client ID built into the app (public). */
+const CLIENT_ID = '435425521293-m9kr2n2kdb4n88m7pkugdhd8nfdk26ro.apps.googleusercontent.com';
+const OWN_CLIENT_ID = '123456789012-testclient.apps.googleusercontent.com';
 const TOKEN = 'ya29.test-token-0123456789';
 const SCOPES = [
   'https://www.googleapis.com/auth/calendar.readonly',
@@ -121,18 +123,20 @@ async function mockGoogleApis(context: BrowserContext, gmail: () => ApiReply = (
 
 const section = (page: Page) => page.getByTestId('settings-google');
 
-async function setClientId(page: Page) {
-  const field = section(page).getByTestId('google-client-id');
-  await field.fill(CLIENT_ID);
-  await field.press('Enter');
-  await expect(page.getByText('Client-ID gespeichert')).toBeVisible();
-}
-
-test('the setup guide shows the addresses to register', async ({ page }) => {
+test('without developer mode only the sign-in; setup and own client ID in developer mode', async ({
+  page,
+  context,
+}) => {
+  const authRequests = await mockGoogleSignIn(context, () => 'stay');
   await openApp(page, '/settings');
   const google = section(page);
   await expect(google.getByTestId('google-status')).toHaveText('Nicht verbunden');
-  await expect(google.getByRole('button', { name: 'Mit Google verbinden' })).toBeDisabled();
+  await expect(google.getByTestId('google-client-id')).toHaveCount(0);
+  await expect(google.getByRole('button', { name: /So richtest du Google ein/ })).toHaveCount(0);
+  await expect(google.getByRole('button', { name: 'Mit Google verbinden' })).toBeEnabled();
+  await expect(google.getByRole('button', { name: /Weiterleitung/ })).toHaveCount(0);
+
+  await enableDevMode(page);
   await google.getByRole('button', { name: /So richtest du Google ein/ }).click();
   await expect(google.getByTestId('google-origin')).toHaveText('http://localhost:4173');
   await expect(google.getByTestId('google-redirect')).toHaveText(
@@ -142,6 +146,13 @@ test('the setup guide shows the addresses to register', async ({ page }) => {
   await field.fill('GOCSPX-geheim');
   await field.press('Enter');
   await expect(google.getByText('Das sieht nicht nach einer Client-ID aus')).toBeVisible();
+  await field.fill(OWN_CLIENT_ID);
+  await field.press('Enter');
+  await expect(page.getByText('Client-ID gespeichert')).toBeVisible();
+  const popup = context.waitForEvent('page');
+  await google.getByRole('button', { name: 'Mit Google verbinden' }).click();
+  await (await popup).close();
+  expect(authRequests[0]?.searchParams.get('client_id')).toBe(OWN_CLIENT_ID);
 });
 
 test('sign-in in a window, access test, disconnect', async ({ page, context }) => {
@@ -149,12 +160,10 @@ test('sign-in in a window, access test, disconnect', async ({ page, context }) =
   const authRequests = await mockGoogleSignIn(context, () => 'grant');
   const { calls, revokes } = await mockGoogleApis(context);
   await openApp(page, '/settings');
-  await setClientId(page);
 
   const popupPromise = context.waitForEvent('page');
   await section(page).getByRole('button', { name: 'Mit Google verbinden' }).click();
-  const popup = await popupPromise;
-  await popup.waitForEvent('close');
+  await popupPromise;
 
   await expect(section(page).getByTestId('google-status')).toContainText('Verbunden bis');
   const request = authRequests[0];
@@ -183,31 +192,11 @@ test('sign-in in a window, access test, disconnect', async ({ page, context }) =
   expect(problems).toEqual([]);
 });
 
-test('sign-in by redirect comes back to the settings after unlocking', async ({
-  page,
-  context,
-}) => {
-  await mockGoogleSignIn(context, () => 'grant');
-  await mockGoogleApis(context);
-  await openApp(page, '/settings');
-  await setClientId(page);
-
-  await section(page).getByRole('button', { name: 'Alternative: per Weiterleitung' }).click();
-  await expect(page.getByTestId('lock-screen')).toHaveAttribute('data-mode', 'unlock');
-  // The token is gone from the address bar and from sessionStorage.
-  expect(page.url()).not.toContain('access_token');
-  expect(await page.evaluate(() => JSON.stringify({ ...sessionStorage }))).not.toContain(TOKEN);
-  await unlock(page);
-  await expect(page.getByRole('heading', { level: 1, name: 'Einstellungen' })).toBeVisible();
-  await expect(section(page).getByTestId('google-status')).toContainText('Verbunden bis');
-});
-
 test('refused or incomplete permissions are explained', async ({ page, context }) => {
   const outcomes: SignIn[] = ['deny', 'calendarOnly'];
   let next = 0;
   await mockGoogleSignIn(context, () => outcomes[next++] ?? 'grant');
   await openApp(page, '/settings');
-  await setClientId(page);
 
   const connect = section(page).getByRole('button', { name: 'Mit Google verbinden' });
   await connect.click();
@@ -224,7 +213,6 @@ test('refused or incomplete permissions are explained', async ({ page, context }
 test('closing the sign-in window cancels', async ({ page, context }) => {
   await mockGoogleSignIn(context, () => 'stay');
   await openApp(page, '/settings');
-  await setClientId(page);
   const popupPromise = context.waitForEvent('page');
   await section(page).getByRole('button', { name: 'Mit Google verbinden' }).click();
   const popup = await popupPromise;
@@ -239,7 +227,6 @@ test('API problems are shown per service', async ({ page, context }) => {
   await mockGoogleSignIn(context, () => 'grant');
   await mockGoogleApis(context, () => replies[next++] ?? 'ok');
   await openApp(page, '/settings');
-  await setClientId(page);
   await section(page).getByRole('button', { name: 'Mit Google verbinden' }).click();
   await expect(section(page).getByTestId('google-status')).toContainText('Verbunden bis');
 
