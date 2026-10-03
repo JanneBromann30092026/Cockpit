@@ -102,7 +102,7 @@ Touch-first (iPad), wie Kompass:
 - [x] 0 Projektkontext (CLAUDE.md)
 - [x] 1 Fundament: Setup, PWA, Deployment, Design-System & Shell (aus Kompass)
 - [x] 2 Datenbank, Verschlüsselung & App-Sperre (aus Kompass)
-- [ ] 3 Einstellungen & optionale KI (Grundlage: Key, Modell, Test)
+- [x] 3 Einstellungen & optionale KI (Grundlage: Key, Modell, Test)
 - [ ] 4 Google-Anbindung & „Heute“ (Kalender, Gmail; Anmeldung auf dem iPad zuerst prüfen)
 - [ ] 5 Aufgaben (inkl. Anzeige in „Heute“)
 - [ ] 6 Verträge & Dokumente (PDF/Foto, Fristen, Kalender-Export, Fragen, KI-Auslesen)
@@ -135,3 +135,10 @@ Touch-first (iPad), wie Kompass:
   - Sperrbildschirm mit lebendem Rundinstrument (`GaugeMark`): Nadel misst während der Prüfung, schwingt beim Entsperren in die Icon-Stellung und die Skala leuchtet auf. Seitenleiste hat „Sperren“, Einstellungen → Sicherheit „Jetzt sperren“, Sperrzeit (1–30 Min., Standard 5), Passwort ändern. Hintergrund > 1 Min. sperrt immer.
   - Testpasswort `Cockpit-Test-2026!` (src/core/devConstants.ts = e2e/ipad.ts), im Entwicklermodus sichtbar. Entwicklerbereich „Verschlüsselung testen“: Testaufgaben anlegen/ändern/löschen, Zähler je Tabelle, Ciphertext-Vorschau; „Datenbank zurücksetzen“ in den Einstellungen.
   - Tests: Krypto (Round-Trip, falsches Passwort, manipulierter Ciphertext/IV, AAD, Formatversion), Tresor, Passwortwechsel inkl. secrets, Sync, Repositories, Schema-Upgrade von Version 1. E2E: Ersteinrichtung, Sperren/Entsperren, Wartezeit, Inaktivität und Hintergrund (Zeitverschiebung nur für `Date.now()`), kein Klartext in IndexedDB/localStorage, zweiter Tab, Passwortwechsel, Passwort vergessen, Offline-Entsperren.
+- Schritt 3 (Einstellungen & optionale KI):
+  - Aufbau wie Synapse (src/services/ai: config, types, apiKey, anthropicProvider, index). `@anthropic-ai/sdk` ^0.131.0, direkt im Browser (`dangerouslyAllowBrowser`, `maxRetries: 1`, 15 s Zeitlimit); das SDK liegt in einem eigenen Lazy-Chunk und wird erst beim ersten KI-Aufruf geladen. CSP: `connect-src 'self' https://api.anthropic.com`.
+  - Einstellungen: `aiEnabled` (Standard aus) und `aiModel` (Standard `claude-haiku-4-5-20251001`; Auswahl Haiku 4.5 / Sonnet 5.5 / Opus 5.5 oder eigene Modell-ID, Muster `AI_MODEL_PATTERN`). Ausgeschaltet bleibt ein hinterlegter Key gespeichert, die App sendet nichts.
+  - API-Key: verschlüsselt in `secrets` (`secretsRepo`, AAD `cockpit:v1:secrets:<key>`, Passwortwechsel verschlüsselt mit), nie im Store, nie im Klartext angezeigt („Key hinterlegt“), Status über `observeHas` (liveQuery liest nur, ob der Eintrag existiert). Eingabefeld ist bewusst `type="text"` mit `-webkit-text-security: disc` statt Passwortfeld, damit Safari nicht den Schlüsselbund (mit dem App-Passwort) anbietet.
+  - „Verbindung testen“ ruft `models.retrieve` auf (prüft Key, Netz und Modell, erzeugt keine Tokens, kostet nichts). Fehlercodes: NO_API_KEY, DISABLED, LOCKED, OFFLINE (vor dem Laden des SDK geprüft), NETWORK, TIMEOUT, ABORTED, RATE_LIMIT (429), OVERLOADED (529), AUTH (401/403), MODEL_NOT_FOUND (404), API_ERROR – deutsche Texte in de.ts, nie mit Key.
+  - Für spätere KI-Funktionen: Sonnet 5.5 / Opus 5.5 lehnen erzwungenes `tool_choice` (`any`/`tool`) ab → `auto` + `strict: true` oder Structured Outputs; vor dem Lesen von `content` immer `stop_reason` (auch `refusal`) prüfen; Opus 5.5 denkt immer (kein `thinking: disabled`), Tiefe über `output_config.effort`.
+  - Tests: Provider/Fehlerzuordnung (Fake-Client), Key-Speicherung verschlüsselt, gesperrt → LOCKED, offline → OFFLINE. E2E mit `page.route` auf api.anthropic.com (inkl. OPTIONS-Preflight): standardmäßig keine Anfrage, Key speichern/entfernen, kein Key im DOM/IndexedDB/localStorage, Header `x-api-key` und `anthropic-dangerous-direct-browser-access`, 401/404/429/529, offline, Modellwahl übersteht Neuladen. Achtung: Das SDK wiederholt 429/529 einmal selbst – Mocks müssen bei mehreren Anfragen gleich antworten.
