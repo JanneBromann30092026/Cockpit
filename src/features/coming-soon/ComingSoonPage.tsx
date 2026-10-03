@@ -5,7 +5,6 @@ import {
   ListChecks,
   NotebookPen,
   Sparkles,
-  Sun,
   type LucideIcon,
 } from 'lucide-react';
 import { Badge, Surface } from '@/components/ui';
@@ -17,7 +16,6 @@ export type ComingSoonKey = keyof typeof de.comingSoon.pages;
 
 /** Navigation label, icon and roadmap step of every page that is still a placeholder. */
 const PAGES: Record<ComingSoonKey, { title: string; icon: LucideIcon; step: number }> = {
-  today: { title: de.nav.today, icon: Sun, step: 4 },
   tasks: { title: de.nav.tasks, icon: ListChecks, step: 5 },
   documents: { title: de.nav.documents, icon: FileText, step: 6 },
   reviews: { title: de.nav.reviews, icon: NotebookPen, step: 7 },

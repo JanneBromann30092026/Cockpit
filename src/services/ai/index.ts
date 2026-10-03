@@ -1,7 +1,14 @@
 import { secretsRepo } from '@/data/repositories';
 import { VaultLockedError } from '@/services/crypto/session';
 import { API_KEY_SECRET } from './config';
-import { AiError, type AiCallOptions, type AiProvider, type ConnectionTestResult } from './types';
+import type { DaySummaryRequest } from '@/data/prompts/daySummary';
+import {
+  AiError,
+  type AiCallOptions,
+  type AiProvider,
+  type ConnectionTestResult,
+  type DaySummaryResult,
+} from './types';
 
 export {
   checkApiKey,
@@ -50,6 +57,16 @@ export async function getAiProvider(config: AiConfig): Promise<AiProvider> {
   const loaded = await import('./anthropicProvider').catch(() => null);
   if (!loaded) throw new AiError(isOnline() ? 'NETWORK' : 'OFFLINE');
   return new loaded.AnthropicProvider({ apiKey, model: config.model });
+}
+
+/** The day in three sentences (sends the overview data to Anthropic – only on tap). */
+export async function summarizeDayWithAi(
+  config: AiConfig,
+  input: DaySummaryRequest,
+  options?: AiCallOptions,
+): Promise<DaySummaryResult> {
+  const provider = await getAiProvider(config);
+  return provider.summarizeDay(input, options);
 }
 
 /** Checks key, network and model (no tokens are generated, so it costs nothing). */

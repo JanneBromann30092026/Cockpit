@@ -1,6 +1,17 @@
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
-import { Check, Copy, Info, Maximize2, Minimize2, Pencil, Plus, Share, Trash2 } from 'lucide-react';
+import {
+  Check,
+  Copy,
+  Info,
+  Maximize2,
+  Minimize2,
+  Pencil,
+  Plus,
+  Share,
+  Sun,
+  Trash2,
+} from 'lucide-react';
 import {
   ActionMenu,
   ActionMenuButton,
@@ -38,6 +49,7 @@ import { useFocusModeRequest } from '@/app/shell/focusMode';
 import { Page } from '@/app/shell/Page';
 import { useSettings } from '@/features/settings/settingsStore';
 import { de } from '@/i18n/de';
+import { loadDemoDay } from '@/features/today/todayStore';
 import { VaultDevSection } from './VaultDevSection';
 
 const t = de.dev;
@@ -469,6 +481,21 @@ export default function DevUiPage() {
     <Page title={t.title}>
       <div className="flex flex-col gap-8">
         <VaultDevSection />
+        <Section id="today" title={t.today.title}>
+          <p className="text-base text-fg-secondary">{t.today.hint}</p>
+          <Row>
+            <Button
+              icon={Sun}
+              onClick={() => {
+                loadDemoDay();
+                void navigate('/today');
+              }}
+              data-testid="dev-demo-day"
+            >
+              {t.today.load}
+            </Button>
+          </Row>
+        </Section>
         <Section id="buttons" title={t.sections.buttons}>
           <ButtonsDemo />
         </Section>

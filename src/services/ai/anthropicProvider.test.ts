@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { describe, expect, it, vi } from 'vitest';
 import { AnthropicProvider, toAiError, type AnthropicClientLike } from './anthropicProvider';
 import { AiError } from './types';
+import { DAY_SUMMARY_SYSTEM_PROMPT, type DaySummaryRequest } from '@/data/prompts/daySummary';
 
 const MODEL = 'claude-haiku-4-5-20251001';
 
@@ -12,16 +13,29 @@ const modelInfo = {
   created_at: '2025-10-01T00:00:00Z',
 } as unknown as Anthropic.ModelInfo;
 
+const notExpected = () => Promise.reject(new Error('not expected in this test'));
+
 function provider(
   retrieve: AnthropicClientLike['models']['retrieve'],
-  overrides: { model?: string; timeoutMs?: number; online?: boolean; apiKey?: string } = {},
+  overrides: {
+    model?: string;
+    timeoutMs?: number;
+    online?: boolean;
+    apiKey?: string;
+    create?: AnthropicClientLike['messages']['create'];
+    betaCreate?: AnthropicClientLike['beta']['messages']['create'];
+  } = {},
 ) {
   return new AnthropicProvider({
     apiKey: overrides.apiKey ?? 'sk-ant-test-key-0000000000',
     model: overrides.model ?? MODEL,
     timeoutMs: overrides.timeoutMs,
     isOnline: () => overrides.online ?? true,
-    createClient: () => ({ models: { retrieve } }),
+    createClient: () => ({
+      models: { retrieve },
+      messages: { create: overrides.create ?? notExpected },
+      beta: { messages: { create: overrides.betaCreate ?? notExpected } },
+    }),
   });
 }
 
@@ -122,5 +136,70 @@ describe('error mapping', () => {
     );
     expect(error).toBeInstanceOf(AiError);
     expect(error.message).not.toContain('sk-ant');
+  });
+});
+
+const day: DaySummaryRequest = {
+  now: 'Montag, 5. Oktober 2026, 09:00 Uhr',
+  events: [{ time: '10:00–11:30', title: 'Vorlesung' }],
+  mails: { important: [], people: [], updates: [], newsletters: 3 },
+};
+
+function answer(text: string, stopReason = 'end_turn'): Anthropic.Message {
+  return {
+    id: 'msg_1',
+    type: 'message',
+    role: 'assistant',
+    model: MODEL,
+    content: [{ type: 'text', text, citations: null }],
+    stop_reason: stopReason,
+    stop_sequence: null,
+    usage: { input_tokens: 10, output_tokens: 10 },
+  } as unknown as Anthropic.Message;
+}
+
+describe('AnthropicProvider.summarizeDay', () => {
+  it('asks for three sentences with the overview data only', async () => {
+    const create = vi.fn(() =>
+      Promise.resolve(answer('Wichtig ist die Vorlesung. Danach ist Luft. Drei Newsletter.')),
+    );
+    const result = await provider(notExpected, { create }).summarizeDay(day);
+    expect(result).toEqual({
+      sentences: ['Wichtig ist die Vorlesung.', 'Danach ist Luft.', 'Drei Newsletter.'],
+      model: MODEL,
+    });
+    const [params, options] = create.mock.calls[0] as unknown as [
+      Anthropic.MessageCreateParamsNonStreaming,
+      { timeout: number },
+    ];
+    expect(params.system).toBe(DAY_SUMMARY_SYSTEM_PROMPT);
+    expect(params.model).toBe(MODEL);
+    expect(params.messages[0]?.content).toContain('Vorlesung');
+    expect(options.timeout).toBe(45_000);
+  });
+
+  it('uses the server-side fallback for models that can decline', async () => {
+    const betaCreate = vi.fn<
+      (
+        params: Anthropic.Beta.MessageCreateParamsNonStreaming,
+      ) => Promise<Anthropic.Beta.BetaMessage>
+    >(() => Promise.resolve(answer('Ein Satz.') as unknown as Anthropic.Beta.BetaMessage));
+    await provider(notExpected, { model: 'claude-opus-5-5', betaCreate }).summarizeDay(day);
+    expect(betaCreate.mock.calls[0]?.[0]).toMatchObject({
+      model: 'claude-opus-5-5',
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default',
+    });
+  });
+
+  it('reports refusals and empty answers', async () => {
+    const refused = vi.fn(() => Promise.resolve(answer('', 'refusal')));
+    await expect(
+      provider(notExpected, { create: refused }).summarizeDay(day),
+    ).rejects.toMatchObject({ code: 'REFUSED' });
+    const empty = vi.fn(() => Promise.resolve(answer('   ', 'max_tokens')));
+    await expect(provider(notExpected, { create: empty }).summarizeDay(day)).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
   });
 });

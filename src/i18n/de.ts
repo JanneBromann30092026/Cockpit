@@ -65,6 +65,108 @@ export const de = {
     devHint: (password: string) => `Entwicklermodus · Testpasswort: ${password}`,
     unavailable: 'Cockpit kann nicht starten',
   },
+  today: {
+    refresh: 'Aktualisieren',
+    refreshing: 'Wird aktualisiert …',
+    updatedAt: (time: string) => `Stand ${time} Uhr`,
+    demoBadge: 'Demo-Tag',
+    overviewTitle: 'Dein Tag in drei Sätzen',
+    overviewByClaude: '(Claude)',
+    summarize: 'Mit Claude formulieren',
+    summarizing: 'Claude schreibt …',
+    summarizeHint: 'Sendet Termine, Absender, Betreffe und Vorschauzeilen an Anthropic.',
+    ruleBased: 'Ohne KI',
+    resummarize: 'Neu formulieren',
+    showRuleBased: 'Ohne KI anzeigen',
+    demoLoad: 'Demo-Tag anzeigen',
+    demoEnd: 'Demo beenden',
+    overview: {
+      focusDeadline: (name: string, subject: string) =>
+        `Das Wichtigste: ${name} wartet mit einer Frist auf dich – „${subject}“.`,
+      focusQuestion: (name: string, subject: string) =>
+        `Das Wichtigste: ${name} hat dir eine Frage gestellt – „${subject}“.`,
+      focusMail: (name: string, subject: string) =>
+        `Das Wichtigste: die Mail von ${name} – „${subject}“.`,
+      focusNow: (title: string, end: string) => `Gerade läuft „${title}“ (bis ${end} Uhr).`,
+      focusNext: (title: string, time: string, location?: string) =>
+        `Als Nächstes: „${title}“ um ${time} Uhr${location ? ` (${location})` : ''}.`,
+      focusNone: 'Heute steht nichts Dringendes an.',
+      scheduleUnknown: 'Deine Termine konnten gerade nicht geladen werden.',
+      scheduleFree: 'Keine Termine – der Tag gehört dir.',
+      scheduleAllDayOnly: (count: number) =>
+        count === 1
+          ? 'Keine festen Termine, nur ein ganztägiger Eintrag.'
+          : `Keine festen Termine, nur ${count} ganztägige Einträge.`,
+      scheduleDone: (count: number) =>
+        count === 1
+          ? 'Dein Termin für heute ist geschafft.'
+          : `Deine ${count} Termine sind für heute geschafft.`,
+      scheduleSpan: (count: number, from: string, to: string) =>
+        `${count === 1 ? '1 Termin' : `${count} Termine`} zwischen ${from} und ${to} Uhr`,
+      scheduleTight: (time: string, before: string, after: string) =>
+        ` – eng wird es um ${time} Uhr zwischen „${before}“ und „${after}“.`,
+      scheduleOverlap: (before: string, after: string) =>
+        ` – „${before}“ und „${after}“ überschneiden sich.`,
+      scheduleRelaxed: ' – dazwischen bleibt genug Luft.',
+      mailsUnknown: 'Deine Mails konnten gerade nicht geladen werden.',
+      mailsNone: 'Keine ungelesenen Mails seit gestern.',
+      mailsTotal: (count: number) =>
+        count === 1 ? '1 ungelesene Mail seit gestern' : `${count} ungelesene Mails seit gestern`,
+      mailsImportant: (count: number) => `, davon ${count} mit Frage oder Frist`,
+      mailsBulk: (count: number) =>
+        count === 1
+          ? '; ein Newsletter kann warten'
+          : `; ${count} Newsletter und Werbung können warten`,
+    },
+    events: {
+      title: 'Termine',
+      allDay: 'Ganztägig',
+      now: 'Jetzt',
+      empty: 'Heute keine Termine.',
+      tight: (minutes: number) =>
+        minutes < 0
+          ? 'Überschneidung'
+          : minutes === 0
+            ? 'Kein Puffer'
+            : `Nur ${minutes} Min. Puffer`,
+      untitled: 'Ohne Titel',
+      openInCalendar: 'Im Kalender öffnen',
+    },
+    mails: {
+      title: 'Ungelesene Mails (24 h)',
+      empty: 'Keine ungelesenen Mails seit gestern.',
+      groups: {
+        important: 'Frage oder Frist',
+        people: 'Von Personen',
+        updates: 'Updates',
+        bulk: 'Newsletter & Werbung',
+      },
+      question: 'Frage',
+      deadline: 'Frist',
+      showBulk: (count: number) => `${count} anzeigen`,
+      hideBulk: 'Ausblenden',
+      openInGmail: 'In Gmail öffnen',
+      noSubject: '(kein Betreff)',
+      yesterday: (time: string) => `gestern ${time}`,
+      limit: (count: number) => `Die ${count} neuesten werden angezeigt.`,
+    },
+    connect: {
+      title: 'Termine und Mails einbinden',
+      text: 'Verbinde Google (nur lesend), dann siehst du hier deine Termine und ungelesenen Mails von heute.',
+      setupFirst: 'Richte Google zuerst in den Einstellungen ein.',
+      toSettings: 'Zu den Einstellungen',
+      button: 'Mit Google verbinden',
+      expired: 'Die Google-Verbindung ist abgelaufen (sie gilt etwa eine Stunde).',
+      reconnect: 'Neu verbinden',
+    },
+    sourceError: (reason: string) => `Konnte nicht geladen werden: ${reason}`,
+    later: {
+      tasks: 'Fällige Aufgaben',
+      tasksText: 'Überfällige und heute fällige Aufgaben erscheinen hier.',
+      documents: 'Fristen & Verträge',
+      documentsText: 'Demnächst fällige Verträge und Kündigungsfristen erscheinen hier.',
+    },
+  },
   google: {
     title: 'Google (Kalender & Gmail)',
     intro:
@@ -138,10 +240,6 @@ export const de = {
   comingSoon: {
     badge: (step: number) => `Kommt in Schritt ${step}`,
     pages: {
-      today: {
-        heading: 'Dein Tag auf einen Blick',
-        text: 'Termine aus Google Kalender, wichtige Mails der letzten 24 Stunden, fällige Aufgaben und Fristen – dazu ein Überblick in drei Sätzen: Was ist heute das Wichtigste, wo wird es zeitlich eng?',
-      },
       tasks: {
         heading: 'Alles, was zu tun ist',
         text: 'Aufgaben mit Fälligkeit und Priorität. Was heute fällig oder überfällig ist, erscheint direkt in „Heute“.',
@@ -249,6 +347,8 @@ export const de = {
         OVERLOADED: 'Anthropic ist gerade überlastet – bitte gleich noch einmal versuchen.',
         AUTH: 'Der API-Key wurde abgelehnt. Bitte prüfe ihn in der Anthropic Console.',
         MODEL_NOT_FOUND: 'Dieses Modell gibt es nicht oder dein Key hat keinen Zugriff darauf.',
+        REFUSED: 'Claude hat diese Anfrage abgelehnt.',
+        INVALID_RESPONSE: 'Claude hat keine verwertbare Antwort geliefert. Bitte erneut versuchen.',
         API_ERROR: 'Anthropic hat einen Fehler gemeldet. Bitte später erneut versuchen.',
       },
     },
@@ -327,6 +427,11 @@ export const de = {
         'Lernzettel Statistik',
         'Handyvertrag prüfen',
       ],
+    },
+    today: {
+      title: 'Heute',
+      hint: 'Zeigt einen erfundenen Tag mit Terminen und Mails – ohne Google. Bleibt nur im Arbeitsspeicher.',
+      load: 'Demo-Tag laden',
     },
     disabledTitle: 'Entwicklermodus ist aus',
     disabledText: 'Aktiviere ihn in den Einstellungen, um diesen Bereich zu sehen.',
@@ -477,6 +582,10 @@ export const de = {
           { keys: ['6'], label: nav.brand },
           { keys: ['7'], label: nav.settings },
         ],
+      },
+      {
+        title: nav.today,
+        items: [{ keys: ['R'], label: 'Termine und Mails aktualisieren' }],
       },
     ],
   },

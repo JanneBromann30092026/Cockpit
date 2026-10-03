@@ -18,7 +18,7 @@ test('app shell loads without console errors or warnings', async ({ page }) => {
 
   await expect(page).toHaveURL(/#\/today$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Heute' })).toBeVisible();
-  await expect(page.getByText('Kommt in Schritt 4')).toBeVisible();
+  await expect(page.getByText('Termine und Mails einbinden')).toBeVisible();
   await expect(nav(page)).toBeVisible();
   await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveCount(1);
   await expect(page).toHaveTitle('Cockpit');
@@ -53,7 +53,7 @@ test('navigation switches pages', async ({ page }) => {
     ['Bibliothek', 'Kommt in Schritt 9'],
     ['Marke', 'Kommt in Schritt 10'],
     ['Einstellungen', 'Darstellung'],
-    ['Heute', 'Kommt in Schritt 4'],
+    ['Heute', 'Termine und Mails einbinden'],
   ] as const;
   for (const [name, text] of pages) {
     await nav(page).getByRole('link', { name }).click();

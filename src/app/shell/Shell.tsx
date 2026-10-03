@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Spinner } from '@/components/ui';
 import { ComingSoonPage } from '@/features/coming-soon/ComingSoonPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
+import { TodayPage } from '@/features/today/TodayPage';
 import { de } from '@/i18n/de';
 import { easeOut } from '@/styles/motion';
 import { useReducedMotion } from '@/styles/useReducedMotion';
@@ -55,7 +56,7 @@ function AnimatedRoutes() {
         >
           <Routes location={location}>
             <Route path="/" element={<Navigate to="/today" replace />} />
-            <Route path="/today" element={<ComingSoonPage page="today" />} />
+            <Route path="/today" element={<TodayPage />} />
             <Route path="/tasks" element={<ComingSoonPage page="tasks" />} />
             <Route path="/documents" element={<ComingSoonPage page="documents" />} />
             <Route path="/reviews" element={<ComingSoonPage page="reviews" />} />
