@@ -23,8 +23,8 @@ const THEME_COLOR = '#090D16';
 /**
  * Content-Security-Policy as meta tag. Only added to production builds, because the
  * Vite dev server relies on inline scripts/styles for HMR. Extend deliberately, each with the
- * step that needs it: Google (OAuth, Calendar, Gmail) in step 4, api.anthropic.com for the
- * optional AI in step 3.
+ * step that needs it: api.anthropic.com for the optional AI (step 3), Google (OAuth,
+ * Calendar, Gmail) in step 4.
  */
 const CSP = [
   "default-src 'self'",
@@ -32,7 +32,7 @@ const CSP = [
   "style-src 'self'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
-  "connect-src 'self'",
+  "connect-src 'self' https://api.anthropic.com",
   "worker-src 'self'",
   "manifest-src 'self'",
   "object-src 'none'",

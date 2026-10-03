@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { create } from 'zustand';
 import { DEFAULT_LOCK_AFTER_MINUTES, LOCK_AFTER_MINUTES } from '@/core/lock';
 import { settingsRepo } from '@/data/repositories';
+import { AI_MODEL_PATTERN, DEFAULT_AI_MODEL } from '@/services/ai/config';
 
 export const THEME_PREFERENCES = ['system', 'light', 'dark'] as const;
 export type ThemePreference = (typeof THEME_PREFERENCES)[number];
@@ -20,6 +21,9 @@ const schemas = {
   sidebarCollapsed: z.boolean(),
   // Security (needed before unlocking, therefore a plain setting)
   lockAfterMinutes: z.literal(LOCK_AFTER_MINUTES),
+  // Optional AI (off by default; the key itself lives encrypted in the secrets table)
+  aiEnabled: z.boolean(),
+  aiModel: z.string().trim().regex(AI_MODEL_PATTERN),
   // Developer
   devMode: z.boolean(),
 };
@@ -32,6 +36,8 @@ export const SETTINGS_DEFAULTS: SettingsValues = {
   reduceMotion: false,
   sidebarCollapsed: false,
   lockAfterMinutes: DEFAULT_LOCK_AFTER_MINUTES,
+  aiEnabled: false,
+  aiModel: DEFAULT_AI_MODEL,
   devMode: false,
 };
 

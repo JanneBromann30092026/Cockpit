@@ -8,6 +8,7 @@ import {
 import { createRecordRepo } from './recordsRepo';
 
 export { metaRepo, VaultExistsError } from './metaRepo';
+export { secretsRepo } from './secretsRepo';
 export { settingsRepo } from './settingsRepo';
 
 export const tasksRepo = createRecordRepo('tasks', taskInputSchema);

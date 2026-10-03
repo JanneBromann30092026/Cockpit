@@ -163,6 +163,52 @@ async function changePassword(page: Page) {
   await dialog.getByLabel('Neues Passwort', { exact: true }).fill('Sonnenblume Fahrrad Wolke');
 }
 
+/** Mocked Anthropic API: the connection test answers without a real key or network. */
+async function mockAnthropic(page: Page) {
+  const cors = {
+    'access-control-allow-origin': '*',
+    'access-control-allow-headers': '*',
+    'access-control-allow-methods': 'GET, POST, OPTIONS',
+  };
+  await page.route('https://api.anthropic.com/**', (route) =>
+    route.request().method() === 'OPTIONS'
+      ? route.fulfill({ status: 204, headers: cors })
+      : route.fulfill({
+          status: 200,
+          headers: { ...cors, 'content-type': 'application/json' },
+          body: JSON.stringify({
+            type: 'model',
+            id: 'claude-haiku-4-5-20251001',
+            display_name: 'Claude Haiku 4.5',
+            created_at: '2025-10-01T00:00:00Z',
+          }),
+        }),
+  );
+}
+
+async function settingsAi(page: Page) {
+  const ai = page.getByTestId('settings-ai');
+  const toggle = ai.getByRole('switch', { name: 'KI verwenden' });
+  if ((await toggle.getAttribute('aria-checked')) !== 'true') await toggle.click();
+  const status = ai.getByTestId('api-key-status');
+  await status.waitFor();
+  if ((await status.textContent()) !== 'Key hinterlegt') {
+    await ai.getByTestId('api-key-input').fill('sk-ant-api03-screenshot-0123456789abcdefghijk');
+    await ai.getByRole('button', { name: 'Key speichern' }).click();
+    await status.filter({ hasText: 'Key hinterlegt' }).waitFor();
+  }
+  await ai.getByRole('button', { name: 'Verbindung testen' }).click();
+  await ai.getByTestId('connection-result').waitFor();
+  await page.waitForTimeout(3200); // let the toast disappear
+  await ai.evaluate((element) => element.scrollIntoView({ block: 'start' }));
+}
+
+async function settingsAiOff(page: Page) {
+  await page.getByTestId('settings-ai').evaluate((element) => {
+    element.scrollIntoView({ block: 'start' });
+  });
+}
+
 async function devVault(page: Page) {
   const section = page.getByTestId('dev-section-vault');
   for (let i = 0; i < 3; i += 1) {
@@ -220,6 +266,8 @@ const SHOTS: Shot[] = [
   { route: '/settings', name: 'settings', scroll: true },
   { route: '/settings', name: 'settings-security', prepare: settingsSecurity },
   { route: '/settings', name: 'settings-password', prepare: changePassword },
+  { route: '/settings', name: 'settings-ai-off', prepare: settingsAiOff },
+  { route: '/settings', name: 'settings-ai', prepare: settingsAi },
   { route: '/dev/ui', name: 'dev-ui', prepare: enableDevMode, scroll: true },
   { route: '/dev/ui', name: 'dev-vault', prepare: devVault },
   { route: '/dev/ui', name: 'dev-modal', prepare: click('Modal öffnen') },
@@ -301,6 +349,7 @@ try {
     });
     await context.addInitScript(simulatedKeyboardScript);
     const page = await context.newPage();
+    await mockAnthropic(page);
     const wide = (variant.options.viewport?.width ?? 0) >= 900;
     const split = variant.name.startsWith('split');
     if (!ONLY || ONLY.startsWith('lock')) {

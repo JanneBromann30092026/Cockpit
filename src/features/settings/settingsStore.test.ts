@@ -25,6 +25,13 @@ describe('settings store', () => {
     expect(await settingsRepo.get('theme', 'unset')).not.toBe('sepia');
   });
 
+  it('keeps the AI off by default and validates the model', () => {
+    expect(useSettings.getState().aiEnabled).toBe(false);
+    expect(useSettings.getState().aiModel).toBe('claude-haiku-4-5-20251001');
+    expect(isValidSetting('aiModel', 'claude-sonnet-5-5')).toBe(true);
+    expect(isValidSetting('aiModel', 'Claude Haiku!')).toBe(false);
+  });
+
   it('uses its own localStorage key and repairs broken boot preferences', () => {
     expect(BOOT_PREFS_KEY.startsWith('cockpit.')).toBe(true);
     expect(bootPrefsSchema.parse({ theme: 'sepia', reduceMotion: 'yes' })).toEqual({
