@@ -6,7 +6,6 @@ import { de } from '@/i18n/de';
 import {
   appOrigin,
   connectWithPopup,
-  connectWithRedirect,
   disconnectGoogle,
   oauthRedirectUri,
   testGoogleConnection,
@@ -15,7 +14,7 @@ import {
   type GoogleErrorCode,
 } from '@/services/google';
 import { spring } from '@/styles/motion';
-import { isValidSetting, useSettings } from './settingsStore';
+import { isValidSetting, useGoogleClientId, useSettings } from './settingsStore';
 
 const t = de.google;
 
@@ -86,7 +85,7 @@ function SetupGuide() {
   );
 }
 
-/** Public OAuth client ID: saved on blur or Enter if valid. */
+/** Developer mode: an own public OAuth client ID (empty = built-in), saved on blur or Enter. */
 function ClientIdField() {
   const clientId = useSettings((s) => s.googleClientId);
   const set = useSettings((s) => s.set);
@@ -102,7 +101,7 @@ function ClientIdField() {
     }
     setError(undefined);
     void set('googleClientId', next).then((ok) => {
-      if (ok && next) toast.success(t.clientIdSaved);
+      if (ok) toast.success(t.clientIdSaved);
     });
   };
 
@@ -196,10 +195,11 @@ function ConnectionTest() {
   );
 }
 
-/** Google Calendar and Gmail (read-only): client ID, sign-in test on the iPad, access test. */
+/** Google Calendar and Gmail (read-only): sign-in, access test; setup in developer mode. */
 export function GoogleSettings() {
-  const clientId = useSettings((s) => s.googleClientId);
+  const clientId = useGoogleClientId();
   const loaded = useSettings((s) => s.loaded);
+  const devMode = useSettings((s) => s.devMode);
   const status = useGoogleSession((s) => s.status);
   const expiresAt = useGoogleSession((s) => s.expiresAt);
   const error = useGoogleSession((s) => s.error);
@@ -217,29 +217,23 @@ export function GoogleSettings() {
           </span>
         </Badge>
       </div>
-      {loaded ? <ClientIdField /> : <Skeleton className="h-20 w-full" />}
-      <SetupGuide />
-      <div className="h-px bg-line" />
+      {devMode && (
+        <>
+          {loaded ? <ClientIdField /> : <Skeleton className="h-20 w-full" />}
+          <SetupGuide />
+          <div className="h-px bg-line" />
+        </>
+      )}
       {!connected ? (
         <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap gap-2">
-            <Button
-              icon={LogIn}
-              loading={status === 'connecting'}
-              disabled={!clientId}
-              onClick={() => connectWithPopup(clientId)}
-            >
-              {t.connectPopup}
-            </Button>
-            <Button
-              variant="secondary"
-              icon={LogIn}
-              disabled={!clientId || status === 'connecting'}
-              onClick={() => connectWithRedirect(clientId)}
-            >
-              {t.connectRedirect}
-            </Button>
-          </div>
+          <Button
+            icon={LogIn}
+            loading={status === 'connecting'}
+            onClick={() => connectWithPopup(clientId)}
+            className="self-start"
+          >
+            {t.connectPopup}
+          </Button>
           <p className="text-sm text-fg-muted">{t.connectHint}</p>
         </div>
       ) : (

@@ -1,24 +1,11 @@
 /**
- * Google sign-in for the home screen app. Two variants, because iPadOS treats them
- * differently in installed web apps:
- * - popup: window.open keeps the sign-in inside the app; the callback page hands the
- *   result back via postMessage (opener) or BroadcastChannel.
- * - redirect: the whole app navigates to Google and comes back (reloads, locked again);
- *   the result waits in sessionStorage of this tab and is picked up at startup.
+ * Google sign-in for the home screen app: window.open keeps the sign-in inside the
+ * installed app on the iPad (a full-page redirect would hand it over to Safari with its own
+ * storage). The callback page hands the result back via postMessage (opener) or
+ * BroadcastChannel.
  */
-import {
-  buildAuthUrl,
-  missingScopes,
-  REDIRECT_STATE_PREFIX,
-  type OAuthResult,
-} from '@/core/google/oauth';
-import {
-  GOOGLE_REVOKE_URL,
-  OAUTH_MESSAGE_TYPE,
-  oauthRedirectUri,
-  REDIRECT_RESULT_KEY,
-  REDIRECT_STATE_KEY,
-} from './config';
+import { buildAuthUrl, missingScopes, type OAuthResult } from '@/core/google/oauth';
+import { GOOGLE_REVOKE_URL, OAUTH_MESSAGE_TYPE, oauthRedirectUri } from './config';
 import type { GoogleErrorCode } from './errors';
 import {
   clearGoogleToken,
@@ -134,50 +121,6 @@ export function connectWithPopup(clientId: string): void {
     setGoogleError('CANCELLED');
   }, POLL_MS);
   pending = { state, popup, timer };
-}
-
-/** Navigates the whole app to Google; the result is picked up after the reload. */
-export function connectWithRedirect(clientId: string): void {
-  if (!clientId) {
-    setGoogleError('NO_CLIENT_ID');
-    return;
-  }
-  const state = `${REDIRECT_STATE_PREFIX}${randomState()}`;
-  try {
-    sessionStorage.setItem(REDIRECT_STATE_KEY, state);
-  } catch {
-    setGoogleError('AUTH_FAILED');
-    return;
-  }
-  setGoogleConnecting();
-  window.location.assign(buildAuthUrl({ clientId, redirectUri: oauthRedirectUri(), state }));
-}
-
-/** Startup: takes over the result of a redirect sign-in (and removes it from storage). */
-export function consumeRedirectResult(): void {
-  let raw: string | null;
-  let expected: string | null;
-  try {
-    raw = sessionStorage.getItem(REDIRECT_RESULT_KEY);
-    expected = sessionStorage.getItem(REDIRECT_STATE_KEY);
-    sessionStorage.removeItem(REDIRECT_RESULT_KEY);
-    sessionStorage.removeItem(REDIRECT_STATE_KEY);
-  } catch {
-    return;
-  }
-  if (!raw) return;
-  let result: OAuthResult;
-  try {
-    result = JSON.parse(raw) as OAuthResult;
-  } catch {
-    setGoogleError('AUTH_FAILED');
-    return;
-  }
-  if (!expected || result.state !== expected) {
-    setGoogleError('STATE_MISMATCH');
-    return;
-  }
-  applyResult(result);
 }
 
 /** Forgets the token and asks Google to revoke it (best effort, also works offline). */

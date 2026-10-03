@@ -103,7 +103,7 @@ Touch-first (iPad), wie Kompass:
 - [x] 1 Fundament: Setup, PWA, Deployment, Design-System & Shell (aus Kompass)
 - [x] 2 Datenbank, Verschlüsselung & App-Sperre (aus Kompass)
 - [x] 3 Einstellungen & optionale KI (Grundlage: Key, Modell, Test)
-- [ ] 4 Google-Anbindung & „Heute“ (Kalender, Gmail; Anmeldung auf dem iPad zuerst prüfen)
+- [x] 4 Google-Anbindung & „Heute“ (Kalender, Gmail; Anmeldung auf dem iPad zuerst prüfen)
 - [ ] 5 Aufgaben (inkl. Anzeige in „Heute“)
 - [ ] 6 Verträge & Dokumente (PDF/Foto, Fristen, Kalender-Export, Fragen, KI-Auslesen)
 - [ ] 7 Reviews (Tag & Woche, Änderungen als Aufgaben, KI-Auswertung)
@@ -158,3 +158,8 @@ Touch-first (iPad), wie Kompass:
   - Fehler je Quelle (z. B. Gmail-API nicht aktiviert) – die andere Quelle bleibt sichtbar. Fällige Aufgaben und Fristen erscheinen als Platzhalter („Kommt in Schritt 5/6“).
   - Entwicklermodus: „Demo-Tag anzeigen“ (in „Heute“ und unter Entwickler) mit erfundenem Tag aus src/data/demo/today.ts; Links zu Google sind im Demo-Tag aus.
   - Tests: Unit (Termine, Mail-Einordnung, Überblick, Sätze, Prompt, Store inkl. Sperren/Trennen/Ablauf); E2E mit fester Uhrzeit (`page.clock.setFixedTime`) und gemockten Google-/Anthropic-APIs: Sortierung, Gruppen, Abfrage-Parameter, nichts in IndexedDB/localStorage, Sperren, Fehler je Quelle, Ablauf + Neu verbinden, KI nur auf Tipp ohne Adressen. Screenshots „Heute“ mit Demo-Tag in eigenem Kontext mit fester Uhrzeit (Mo 10:20).
+- Schritt 4, Abschluss (iPad-Test):
+  - Auf dem iPad (Homescreen-App) funktioniert die Anmeldung **per Fenster** (`window.open` öffnet Google als Blatt in der App, Ergebnis per `postMessage`/`BroadcastChannel`). Die Variante per Weiterleitung ist entfernt (Code, Texte, Test).
+  - Häufigster Einrichtungsfehler: `redirect_uri_mismatch` – die Weiterleitungs-URI muss exakt `https://jannebromann30092026.github.io/Cockpit/oauth.html` sein (großes C), Ursprung `https://jannebromann30092026.github.io`.
+  - Client-ID des Cockpit-Projekts fest eingebaut (`GOOGLE_CLIENT_ID` in src/services/google/config.ts, öffentlich). Einstellungen → Google zeigt ohne Entwicklermodus nur Verbinden/Testen/Trennen; Einrichtungsanleitung und eigene Client-ID (leer = eingebaute) nur im Entwicklermodus. „Heute“ verbindet direkt.
+  - E2E: nicht auf das Schließen des Anmeldefensters warten (die App schließt es selbst, evtl. bevor der Listener hängt) – stattdessen auf den App-Zustand („Verbunden bis“).

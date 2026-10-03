@@ -259,7 +259,10 @@ async function mockGoogle(page: Page) {
     .route('https://gmail.googleapis.com/**', api({ emailAddress: 'du@example.com' }));
 }
 
+/** The setup guide and the own client ID are in developer mode only. */
 async function settingsGoogleSetup(page: Page) {
+  const toggle = page.getByRole('switch', { name: 'Entwicklermodus' });
+  if ((await toggle.getAttribute('aria-checked')) !== 'true') await toggle.click();
   const google = page.getByTestId('settings-google');
   await google.evaluate((element) => element.scrollIntoView({ block: 'start' }));
   await google.getByRole('button', { name: /So richtest du Google ein/ }).click();
@@ -268,14 +271,10 @@ async function settingsGoogleSetup(page: Page) {
 
 async function settingsGoogleConnected(page: Page) {
   const google = page.getByTestId('settings-google');
-  const field = google.getByTestId('google-client-id');
-  if (!(await field.inputValue())) {
-    await field.fill('123456789012-beispiel.apps.googleusercontent.com');
-    await field.press('Enter');
-  }
   const popup = page.context().waitForEvent('page');
   await google.getByRole('button', { name: 'Mit Google verbinden' }).click();
-  await (await popup).waitForEvent('close');
+  await popup;
+  await google.getByTestId('google-status').filter({ hasText: 'Verbunden bis' }).waitFor();
   await google.getByRole('button', { name: 'Zugriff testen' }).click();
   await google.getByTestId('google-test-result').waitFor();
   await page.waitForTimeout(3200); // let the toasts disappear
@@ -345,8 +344,8 @@ const SHOTS: Shot[] = [
   { route: '/settings', name: 'settings', scroll: true },
   { route: '/settings', name: 'settings-security', prepare: settingsSecurity },
   { route: '/settings', name: 'settings-password', prepare: changePassword },
-  { route: '/settings', name: 'settings-google-setup', prepare: settingsGoogleSetup },
   { route: '/settings', name: 'settings-google', prepare: settingsGoogleConnected },
+  { route: '/settings', name: 'settings-google-setup', prepare: settingsGoogleSetup },
   { route: '/settings', name: 'settings-ai-off', prepare: settingsAiOff },
   { route: '/settings', name: 'settings-ai', prepare: settingsAi },
   { route: '/dev/ui', name: 'dev-ui', prepare: enableDevMode, scroll: true },

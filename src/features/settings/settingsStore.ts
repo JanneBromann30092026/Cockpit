@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { DEFAULT_LOCK_AFTER_MINUTES, LOCK_AFTER_MINUTES } from '@/core/lock';
 import { settingsRepo } from '@/data/repositories';
 import { GOOGLE_CLIENT_ID_PATTERN } from '@/core/google/oauth';
+import { GOOGLE_CLIENT_ID } from '@/services/google/config';
 import { AI_MODEL_PATTERN, DEFAULT_AI_MODEL } from '@/services/ai/config';
 
 export const THEME_PREFERENCES = ['system', 'light', 'dark'] as const;
@@ -25,7 +26,7 @@ const schemas = {
   // Optional AI (off by default; the key itself lives encrypted in the secrets table)
   aiEnabled: z.boolean(),
   aiModel: z.string().trim().regex(AI_MODEL_PATTERN),
-  // Google: public OAuth client ID ("" until it is set up)
+  // Google: own public OAuth client ID for tests ("" = the built-in one)
   googleClientId: z.union([z.literal(''), z.string().trim().regex(GOOGLE_CLIENT_ID_PATTERN)]),
   // Developer
   devMode: z.boolean(),
@@ -129,3 +130,8 @@ export const useSettings = create<SettingsState>((setState, getState) => ({
     return true;
   },
 }));
+
+/** The OAuth client ID in use: the built-in one unless developer mode set another. */
+export function useGoogleClientId(): string {
+  return useSettings((s) => s.googleClientId) || GOOGLE_CLIENT_ID;
+}

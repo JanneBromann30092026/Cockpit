@@ -153,8 +153,6 @@ export const de = {
     connect: {
       title: 'Termine und Mails einbinden',
       text: 'Verbinde Google (nur lesend), dann siehst du hier deine Termine und ungelesenen Mails von heute.',
-      setupFirst: 'Richte Google zuerst in den Einstellungen ein.',
-      toSettings: 'Zu den Einstellungen',
       button: 'Mit Google verbinden',
       expired: 'Die Google-Verbindung ist abgelaufen (sie gilt etwa eine Stunde).',
       reconnect: 'Neu verbinden',
@@ -177,17 +175,16 @@ export const de = {
       connected: 'Verbunden',
     },
     connectedUntil: (time: string) => `Verbunden bis ${time} Uhr`,
-    clientId: 'OAuth-Client-ID',
+    clientId: 'Eigene OAuth-Client-ID (Entwicklermodus)',
     clientIdHint:
-      'Aus der Google Cloud Console (Typ „Webanwendung“). Sie ist öffentlich und kein Geheimnis.',
+      'Leer lassen, dann nutzt Cockpit die eingebaute Client-ID. Aus der Google Cloud Console (Typ „Webanwendung“); sie ist öffentlich und kein Geheimnis.',
     clientIdPlaceholder: '1234567890-abc….apps.googleusercontent.com',
     clientIdInvalid:
       'Das sieht nicht nach einer Client-ID aus (endet auf .apps.googleusercontent.com).',
     clientIdSaved: 'Client-ID gespeichert',
     connectPopup: 'Mit Google verbinden',
-    connectRedirect: 'Alternative: per Weiterleitung',
     connectHint:
-      'Test für das iPad: Probiere zuerst „Mit Google verbinden“. Klappt das nicht, die Alternative per Weiterleitung – danach entsperrst du Cockpit einmal neu.',
+      'Ein Google-Fenster öffnet sich. Zeigt Google „Diese App wurde nicht überprüft“, wähle „Weiter“ und setze beide Häkchen (Kalender, Gmail). Die Verbindung gilt etwa eine Stunde.',
     disconnect: 'Trennen',
     test: 'Zugriff testen',
     testing: 'Wird geprüft …',
@@ -202,7 +199,7 @@ export const de = {
       'Unter „APIs & Dienste“ → „Bibliothek“ die „Google Calendar API“ und die „Gmail API“ aktivieren.',
       'Unter „Google Auth Platform“ (OAuth-Zustimmungsbildschirm) die App „Cockpit“ anlegen: Zielgruppe „Extern“, Status „Test“, deine Gmail-Adresse als Testnutzer eintragen.',
       'Unter „Clients“ einen Client vom Typ „Webanwendung“ erstellen und die beiden Adressen unten eintragen.',
-      'Die angezeigte Client-ID kopieren und oben einfügen.',
+      'Die angezeigte Client-ID kopieren und oben einfügen (oder fest in den Code übernehmen).',
     ],
     originLabel: 'Autorisierter JavaScript-Ursprung',
     redirectLabel: 'Autorisierte Weiterleitungs-URI',
@@ -234,7 +231,6 @@ export const de = {
       title: 'Cockpit',
       done: 'Anmeldung abgeschlossen – du kannst dieses Fenster schließen.',
       failed: 'Die Anmeldung hat nicht geklappt. Du kannst dieses Fenster schließen.',
-      returning: 'Zurück zu Cockpit …',
     },
   },
   comingSoon: {
