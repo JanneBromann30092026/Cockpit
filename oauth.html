@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Cockpit – Anmeldung</title>
+    <meta name="color-scheme" content="dark light" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex" />
+  </head>
+  <body class="flex min-h-dvh items-center justify-center bg-bg p-6 text-fg">
+    <main class="flex max-w-sm flex-col items-center gap-3 text-center">
+      <img src="/icons/favicon.svg" alt="" width="64" height="64" class="rounded-lg" />
+      <h1 id="title" class="text-xl font-semibold tracking-tight"></h1>
+      <p id="text" class="text-base text-fg-secondary"></p>
+    </main>
+    <script type="module" src="/src/oauth/callback.ts"></script>
+  </body>
+</html>

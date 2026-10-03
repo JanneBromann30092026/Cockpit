@@ -13,6 +13,9 @@ import {
 
 const BASE = '/Cockpit/';
 
+/** Callback page of the Google sign-in (second HTML entry, see src/oauth/callback.ts). */
+const OAUTH_PAGE = 'oauth.html';
+
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
   version: string;
 };
@@ -23,8 +26,9 @@ const THEME_COLOR = '#090D16';
 /**
  * Content-Security-Policy as meta tag. Only added to production builds, because the
  * Vite dev server relies on inline scripts/styles for HMR. Extend deliberately, each with the
- * step that needs it: api.anthropic.com for the optional AI (step 3), Google (OAuth,
- * Calendar, Gmail) in step 4.
+ * step that needs it: api.anthropic.com for the optional AI (step 3), the Google APIs
+ * (Calendar, Gmail, token revocation) in step 4. Google's sign-in page is opened as a
+ * window or page of its own, so it needs no entry here.
  */
 const CSP = [
   "default-src 'self'",
@@ -32,7 +36,7 @@ const CSP = [
   "style-src 'self'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
-  "connect-src 'self' https://api.anthropic.com",
+  "connect-src 'self' https://api.anthropic.com https://www.googleapis.com https://gmail.googleapis.com https://oauth2.googleapis.com",
   "worker-src 'self'",
   "manifest-src 'self'",
   "object-src 'none'",
@@ -61,20 +65,23 @@ function cspPlugin(): Plugin {
 function splashPlugin(): Plugin {
   return {
     name: 'cockpit-splash',
-    transformIndexHtml: () =>
-      SPLASH_DEVICES.flatMap((device) =>
-        (['portrait', 'landscape'] as const).flatMap((orientation) =>
-          SPLASH_THEMES.map((theme) => ({
-            tag: 'link',
-            attrs: {
-              rel: 'apple-touch-startup-image',
-              media: splashMedia(device, orientation, theme),
-              href: `${BASE}splash/${splashFileName(device, orientation, theme)}`,
-            },
-            injectTo: 'head' as const,
-          })),
-        ),
-      ),
+    transformIndexHtml: (_html, context) =>
+      // Only the app itself; the sign-in callback page needs no startup images.
+      context.path.endsWith(OAUTH_PAGE)
+        ? []
+        : SPLASH_DEVICES.flatMap((device) =>
+            (['portrait', 'landscape'] as const).flatMap((orientation) =>
+              SPLASH_THEMES.map((theme) => ({
+                tag: 'link',
+                attrs: {
+                  rel: 'apple-touch-startup-image',
+                  media: splashMedia(device, orientation, theme),
+                  href: `${BASE}splash/${splashFileName(device, orientation, theme)}`,
+                },
+                injectTo: 'head' as const,
+              })),
+            ),
+          ),
   };
 }
 
@@ -132,6 +139,10 @@ export default defineConfig({
   ],
   build: {
     rolldownOptions: {
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        oauth: fileURLToPath(new URL(`./${OAUTH_PAGE}`, import.meta.url)),
+      },
       output: {
         // Vendor chunks: smaller files and better caching across app updates.
         codeSplitting: {
