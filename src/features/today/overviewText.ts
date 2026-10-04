@@ -1,3 +1,4 @@
+import { formatShortDate } from '@/core/format';
 import type { OverviewFacts } from '@/core/today/overview';
 import { de } from '@/i18n/de';
 
@@ -15,8 +16,17 @@ export interface SourceState {
   gmailFailed: boolean;
 }
 
+function cancelWhen(days: number, date: string): string {
+  if (days === 0) return de.documents.when.today;
+  if (days === 1) return `bis ${de.documents.when.tomorrow}`;
+  return `bis ${formatShortDate(date)}`;
+}
+
 function focusSentence(facts: OverviewFacts): string {
   const { focus } = facts;
+  if (focus.kind === 'cancel') {
+    return t.focusCancel(focus.contract.name, cancelWhen(focus.days, focus.date));
+  }
   if (focus.kind === 'task') {
     return focus.overdueDays > 0
       ? t.focusTaskOverdue(focus.task.title, focus.overdueDays)

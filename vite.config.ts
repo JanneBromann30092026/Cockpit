@@ -37,6 +37,8 @@ const CSP = [
   "img-src 'self' data: blob:",
   "font-src 'self'",
   "connect-src 'self' https://api.anthropic.com https://www.googleapis.com https://gmail.googleapis.com https://oauth2.googleapis.com",
+  // Step 6: decrypted PDFs are shown from a temporary blob: URL in a frame.
+  "frame-src 'self' blob:",
   "worker-src 'self'",
   "manifest-src 'self'",
   "object-src 'none'",

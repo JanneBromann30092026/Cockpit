@@ -300,8 +300,8 @@ async function devVault(page: Page) {
   await page.waitForTimeout(3200); // let the toasts disappear
 }
 
-/** Fresh invented tasks (the vault shot created demo test tasks before). */
-async function createDemoTasks(page: Page) {
+/** Fresh invented tasks and contracts (the vault shot created demo test tasks before). */
+async function createDemoData(page: Page) {
   await page.goto(`${PREVIEW_URL}#/dev/ui`);
   const section = page.getByTestId('dev-section-demo');
   await section.waitFor();
@@ -312,10 +312,12 @@ async function createDemoTasks(page: Page) {
   }
   await section.getByTestId('dev-demo-tasks').click();
   await section.getByTestId('dev-demo-count').filter({ hasText: '9 Demo-Einträge' }).waitFor();
+  await section.getByTestId('dev-demo-documents').click();
+  await section.getByTestId('dev-demo-count').filter({ hasText: '15 Demo-Einträge' }).waitFor();
 }
 
 async function demoTasks(page: Page) {
-  await createDemoTasks(page);
+  await createDemoData(page);
   await page.goto(`${PREVIEW_URL}#/tasks`);
   await page.getByTestId('task-row').first().waitFor();
   await page.waitForTimeout(3200); // let the toast disappear
@@ -327,6 +329,32 @@ async function taskEditor(page: Page) {
   const editor = page.getByTestId('task-editor');
   await editor.getByRole('button', { name: 'Morgen', exact: true }).click();
   await editor.getByRole('radio', { name: 'Hoch' }).click();
+}
+
+async function demoDocuments(page: Page) {
+  // A filtered run (SHOTS=documents) has no demo data yet.
+  if ((await page.getByTestId('document-card').count()) === 0) {
+    await createDemoData(page);
+    await page.goto(`${PREVIEW_URL}#/documents`);
+  }
+  await page.getByTestId('document-card').first().waitFor();
+  await page.waitForTimeout(3200); // let the toasts disappear
+}
+
+async function documentDetail(page: Page) {
+  await page.getByTestId('document-card').filter({ hasText: 'Hausrat' }).click();
+  await page.getByTestId('file-tile').first().waitFor();
+}
+
+async function documentEditor(page: Page) {
+  await documentDetail(page);
+  await page.getByTestId('document-edit').click();
+  await page.getByTestId('document-editor').waitFor();
+}
+
+async function documentCalendar(page: Page) {
+  await page.getByTestId('documents-export').click();
+  await page.getByTestId('calendar-preview').waitFor();
 }
 
 async function taskMenu(page: Page) {
@@ -386,6 +414,10 @@ const SHOTS: Shot[] = [
   { route: '/dev/ui', name: 'tasks-demo', prepare: demoTasks, scroll: true },
   { route: '/tasks', name: 'tasks-editor', prepare: taskEditor },
   { route: '/tasks', name: 'tasks-menu', prepare: taskMenu },
+  { route: '/documents', name: 'documents-demo', prepare: demoDocuments, scroll: true },
+  { route: '/documents', name: 'documents-detail', prepare: documentDetail, scroll: true },
+  { route: '/documents', name: 'documents-editor', prepare: documentEditor },
+  { route: '/documents', name: 'documents-calendar', prepare: documentCalendar },
   { route: '/dev/ui', name: 'dev-modal', prepare: click('Modal öffnen') },
   { route: '/dev/ui', name: 'dev-sheet', prepare: click('Bottom Sheet öffnen') },
   { route: '/dev/ui', name: 'dev-side-panel', prepare: click('Seitenpanel öffnen') },
@@ -456,7 +488,7 @@ async function captureToday(variant: { name: string; options: BrowserContextOpti
   await mockAnthropic(page);
   await quickSetup(page);
   await enableDevMode(page);
-  await createDemoTasks(page);
+  await createDemoData(page);
   await page.goto(`${PREVIEW_URL}#/settings`);
   await settingsAi(page);
   // Hash navigation only: a reload would lock the app and forget the demo day.

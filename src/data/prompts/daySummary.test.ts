@@ -17,6 +17,7 @@ describe('day summary prompt', () => {
           { title: 'Steuer', priority: 'hoch', overdueDays: 2 },
           { title: 'Einkaufen', priority: 'mittel', overdueDays: 0 },
         ],
+        deadlines: [{ name: 'Fitnessstudio', kind: 'kündigen bis', date: 'Fr., 09.10.' }],
       }),
     ) as Record<string, unknown>;
     expect(message).toMatchObject({
@@ -26,9 +27,12 @@ describe('day summary prompt', () => {
         { titel: 'Steuer', prioritaet: 'hoch', ueberfaellig_seit_tagen: 2 },
         { titel: 'Einkaufen', prioritaet: 'mittel' },
       ],
+      vertragsfristen: [{ vertrag: 'Fitnessstudio', art: 'kündigen bis', datum: 'Fr., 09.10.' }],
     });
     expect(
-      JSON.parse(buildDaySummaryMessage({ now: 'x', events: null, mails: null, tasks: [] })),
+      JSON.parse(
+        buildDaySummaryMessage({ now: 'x', events: null, mails: null, tasks: [], deadlines: [] }),
+      ),
     ).toMatchObject({
       termine: 'nicht verfügbar',
       mails: 'nicht verfügbar',

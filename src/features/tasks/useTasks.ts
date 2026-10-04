@@ -30,15 +30,4 @@ export function dueLabel(dueDate: string, today: string): string {
   return days > 0 ? t.due.inDays(days) : t.due.daysAgo(-days);
 }
 
-const SHORT_DATE = new Intl.DateTimeFormat('de-DE', {
-  weekday: 'short',
-  day: '2-digit',
-  month: '2-digit',
-  timeZone: 'UTC',
-});
-
-/** "2026-10-07" → "Mi., 07.10." */
-export function formatShortDate(date: string): string {
-  const [y = 1970, m = 1, d = 1] = date.split('-').map(Number);
-  return SHORT_DATE.format(new Date(Date.UTC(y, m - 1, d)));
-}
+export { formatShortDate } from '@/core/format';

@@ -8,6 +8,8 @@ import { z } from 'zod';
 import {
   DOCUMENT_CATEGORIES,
   LIBRARY_TYPES,
+  NOTICE_UNITS,
+  PAYMENT_INTERVALS,
   PRIORITIES,
   REVIEW_KINDS,
   TASK_STATUSES,
@@ -30,6 +32,10 @@ export const LIMITS = {
   /** Weekly review: exactly three concrete changes. */
   weeklyChanges: 3,
   amount: 1_000_000,
+  fileName: 200,
+  /** Attached originals per contract. */
+  files: 20,
+  noticeAmount: 36,
 } as const;
 
 // --- Building blocks --------------------------------------------------------
@@ -86,19 +92,49 @@ export const taskInputSchema = z.object(taskFields);
 
 // --- Contracts & documents (step 6) -------------------------------------------
 
+/**
+ * An attached original (PDF or photo). The content is stored in the `files` table,
+ * encrypted with its own random key; the key lives here, inside the encrypted contract,
+ * so a password change only re-encrypts the contracts, never the (large) files.
+ */
+export const fileMetaSchema = z.object({
+  id,
+  name: requiredText(LIMITS.fileName),
+  type: z.string().trim().max(100),
+  size: z.int().min(0),
+  addedAt: timestamp,
+  /** AES-256 key of the content, base64. */
+  key: z.base64(),
+});
+export type FileMeta = z.output<typeof fileMetaSchema>;
+
+/** A notice period that can be calculated with ("3 Monate"). */
+export const noticeSchema = z.object({
+  amount: z.int().min(1).max(LIMITS.noticeAmount),
+  unit: z.enum(NOTICE_UNITS),
+});
+export type Notice = z.output<typeof noticeSchema>;
+
 export const documentFields = {
   name: requiredText(LIMITS.name),
   category: z.enum(DOCUMENT_CATEGORIES).default('other'),
   provider: optionalText(LIMITS.name),
   /** Next payment or renewal date. */
   dueDate: isoDate.optional(),
-  /** Notice period as written in the contract. */
-  noticePeriod: optionalText(LIMITS.short),
   /** Amount in euros. */
   amount: z.number().min(0).max(LIMITS.amount).optional(),
+  interval: z.enum(PAYMENT_INTERVALS).optional(),
+  /** End of the current term (renews or ends then); the notice period counts back from it. */
+  termEnd: isoDate.optional(),
+  /** Notice period as written in the contract. */
+  noticePeriod: optionalText(LIMITS.short),
+  /** The same period as numbers, when it can be calculated. */
+  notice: noticeSchema.optional(),
   summary: textList(LIMITS.item, LIMITS.summaryPoints).default([]),
   /** Unknown facts ("offene Punkte") instead of invented values. */
   openPoints: textList(LIMITS.item, LIMITS.items).default([]),
+  notes: optionalText(LIMITS.notes),
+  files: z.array(fileMetaSchema).max(LIMITS.files).default([]),
 };
 export const documentSchema = z.object({ ...base, ...documentFields });
 export type DocumentRecord = z.output<typeof documentSchema>;
