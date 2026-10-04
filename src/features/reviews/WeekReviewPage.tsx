@@ -292,9 +292,10 @@ function WeekEditor({ sunday, initial }: { sunday: string; initial?: Review }) {
             icon={Check}
             loading={saving}
             onClick={() => void finish()}
+            aria-label={t.finishWeek}
             data-testid="review-finish"
           >
-            {t.finishWeek}
+            <span className="hidden sm:inline">{t.finishWeek}</span>
           </Button>
         </>
       }

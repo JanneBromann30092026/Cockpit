@@ -236,9 +236,10 @@ function DayEditor({ date, initial }: { date: string; initial?: Review }) {
             icon={Check}
             loading={saving}
             onClick={() => void finish()}
+            aria-label={record?.doneAt ? t.finishAgain : t.finish}
             data-testid="review-finish"
           >
-            {record?.doneAt ? t.finishAgain : t.finish}
+            <span className="hidden sm:inline">{record?.doneAt ? t.finishAgain : t.finish}</span>
           </Button>
         </>
       }

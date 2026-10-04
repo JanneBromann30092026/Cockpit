@@ -484,6 +484,7 @@ async function ensureDemoReviews(page: Page) {
   if ((await page.getByTestId('review-row').count()) === 0) {
     await createDemoData(page);
     await page.goto(`${PREVIEW_URL}#/reviews`);
+    await page.waitForTimeout(3200); // let the toasts disappear
   }
   await page.getByTestId('review-row').first().waitFor();
 }
@@ -501,7 +502,10 @@ async function reviewDay(page: Page) {
   await well.getByTestId('review-went-well-input').press('Enter');
   await page.getByTestId('review-suggestion').first().click();
   await page.getByTestId('review-note').fill('Viel geschafft, abends müde.');
-  await page.getByTestId('review-autosave').filter({ hasText: 'Gespeichert' }).waitFor();
+  await page
+    .getByTestId('review-autosave')
+    .filter({ hasText: 'Gespeichert' })
+    .waitFor({ state: 'attached' });
   await page.locator('[data-scroll-container]').evaluate((element) => {
     element.scrollTop = 0;
   });
