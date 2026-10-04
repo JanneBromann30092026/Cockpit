@@ -3,6 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { AnthropicProvider, toAiError, type AnthropicClientLike } from './anthropicProvider';
 import { AiError } from './types';
 import { DAY_SUMMARY_SYSTEM_PROMPT, type DaySummaryRequest } from '@/data/prompts/daySummary';
+import {
+  CONTRACT_ANSWER_SCHEMA,
+  type ContractQuestionRequest,
+} from '@/data/prompts/contractQuestion';
+import { CONTRACT_EXTRACT_SCHEMA } from '@/data/prompts/contractExtract';
 
 const MODEL = 'claude-haiku-4-5-20251001';
 
@@ -203,5 +208,110 @@ describe('AnthropicProvider.summarizeDay', () => {
     await expect(provider(notExpected, { create: empty }).summarizeDay(day)).rejects.toMatchObject({
       code: 'INVALID_RESPONSE',
     });
+  });
+});
+
+const question: ContractQuestionRequest = {
+  today: '2026-10-05',
+  question: 'Wann kann ich kündigen?',
+  contracts: [
+    { ref: 'v1', name: 'Fitnessstudio', kategorie: 'Abo', zusammenfassung: [], offene_punkte: [] },
+    { ref: 'v2', name: 'Handyvertrag', kategorie: 'Handy', zusammenfassung: [], offene_punkte: [] },
+  ],
+};
+
+describe('AnthropicProvider.askContracts', () => {
+  it('sends the question with structured output and maps known sources', async () => {
+    const create = vi.fn(() =>
+      Promise.resolve(
+        answer(JSON.stringify({ antwort: 'Bis 17.10.2026.', quellen: ['v1', 'v9', 'v1'] })),
+      ),
+    );
+    const result = await provider(notExpected, { create }).askContracts(question);
+    expect(result).toEqual({ text: 'Bis 17.10.2026.', sources: ['v1'], model: MODEL });
+    const [params] = create.mock.calls[0] as unknown as [Anthropic.MessageCreateParamsNonStreaming];
+    expect(params.output_config).toEqual({
+      format: { type: 'json_schema', schema: CONTRACT_ANSWER_SCHEMA },
+    });
+    expect(params.messages[0]?.content).toContain('Fitnessstudio');
+  });
+
+  it('reports refusals, cut-off and unusable answers', async () => {
+    const refused = vi.fn(() => Promise.resolve(answer('', 'refusal')));
+    await expect(
+      provider(notExpected, { create: refused }).askContracts(question),
+    ).rejects.toMatchObject({ code: 'REFUSED' });
+    const cut = vi.fn(() => Promise.resolve(answer('{"antwort": "Bis', 'max_tokens')));
+    await expect(
+      provider(notExpected, { create: cut }).askContracts(question),
+    ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+    const wrong = vi.fn(() => Promise.resolve(answer('Bis Oktober.')));
+    await expect(
+      provider(notExpected, { create: wrong }).askContracts(question),
+    ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+  });
+});
+
+const extracted = {
+  name: 'Handyvertrag',
+  category: 'mobile',
+  provider: 'Funknetz Beispiel',
+  amount_eur: 19.99,
+  interval: 'monthly',
+  due_date: null,
+  term_end: '2027-03-31',
+  notice_period: '1 Monat zum Ende der Mindestlaufzeit',
+  summary: ['20 GB Datenvolumen'],
+  open_points: ['Nächster Zahlungstermin fehlt'],
+};
+
+describe('AnthropicProvider.extractContract', () => {
+  it('sends the PDF as document block before the instruction', async () => {
+    const create = vi.fn(() => Promise.resolve(answer(JSON.stringify(extracted))));
+    const result = await provider(notExpected, { create }).extractContract({
+      today: '2026-10-05',
+      source: { kind: 'pdf', data: 'JVBERi0=' },
+    });
+    expect(result.extraction).toMatchObject({
+      name: 'Handyvertrag',
+      category: 'mobile',
+      amount: 19.99,
+      termEnd: '2027-03-31',
+      removed: 0,
+    });
+    expect(result.extraction.dueDate).toBeUndefined();
+    const [params, options] = create.mock.calls[0] as unknown as [
+      Anthropic.MessageCreateParamsNonStreaming,
+      { timeout: number },
+    ];
+    const content = params.messages[0]?.content as Anthropic.ContentBlockParam[];
+    expect(content[0]).toEqual({
+      type: 'document',
+      source: { type: 'base64', media_type: 'application/pdf', data: 'JVBERi0=' },
+    });
+    expect(content[1]).toMatchObject({ type: 'text' });
+    expect(JSON.stringify(content[1])).toContain('2026-10-05');
+    expect(params.output_config?.format?.schema).toBe(CONTRACT_EXTRACT_SCHEMA);
+    expect(options.timeout).toBe(120_000);
+  });
+
+  it('sends a photo as image block', async () => {
+    const create = vi.fn(() => Promise.resolve(answer(JSON.stringify(extracted))));
+    await provider(notExpected, { create }).extractContract({
+      today: '2026-10-05',
+      source: { kind: 'image', mediaType: 'image/jpeg', data: '/9j/' },
+    });
+    const [params] = create.mock.calls[0] as unknown as [Anthropic.MessageCreateParamsNonStreaming];
+    const content = params.messages[0]?.content as Anthropic.ContentBlockParam[];
+    expect(content[0]).toEqual({
+      type: 'image',
+      source: { type: 'base64', media_type: 'image/jpeg', data: '/9j/' },
+    });
+  });
+
+  it('maps a too large request', () => {
+    expect(
+      toAiError(new Anthropic.APIError(413, {}, 'request too large', headers), false, true).code,
+    ).toBe('TOO_LARGE');
   });
 });

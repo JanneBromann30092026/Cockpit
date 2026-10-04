@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { FileText, Paperclip, Share, Trash2, Eye } from 'lucide-react';
+import { Eye, FileText, Paperclip, Share, Sparkles, Trash2 } from 'lucide-react';
 import {
   ActionMenuButton,
   Button,
@@ -47,8 +47,17 @@ function rejectionText(error: unknown): string {
   return t.saveFailed;
 }
 
-/** The originals of a contract: open, share/save, remove – and attach new ones. */
-export function FileTiles({ document }: { document: DocumentRecord }) {
+/**
+ * The originals of a contract: open, share/save, read with Claude (when AI is on), remove –
+ * and attach new ones.
+ */
+export function FileTiles({
+  document,
+  onExtract,
+}: {
+  document: DocumentRecord;
+  onExtract?: (fileId: string) => void;
+}) {
   const input = useRef<HTMLInputElement>(null);
   const [adding, setAdding] = useState(false);
   const [viewing, setViewing] = useState<FileMeta | null>(null);
@@ -85,6 +94,16 @@ export function FileTiles({ document }: { document: DocumentRecord }) {
 
   const items = (file: FileMeta): ActionMenuItem[] => [
     { id: 'open', label: t.open, icon: Eye, onSelect: () => setViewing(file) },
+    ...(onExtract
+      ? [
+          {
+            id: 'extract',
+            label: de.documents.extract.action,
+            icon: Sparkles,
+            onSelect: () => onExtract(file.id),
+          },
+        ]
+      : []),
     { id: 'share', label: t.share, icon: Share, onSelect: () => void share(file) },
     {
       id: 'remove',
@@ -148,16 +167,27 @@ export function FileTiles({ document }: { document: DocumentRecord }) {
         onChange={(event) => void onFiles(event)}
         data-testid="file-input"
       />
-      <Button
-        variant="secondary"
-        icon={Paperclip}
-        loading={adding}
-        onClick={() => input.current?.click()}
-        className="self-start"
-        data-testid="file-add"
-      >
-        {adding ? de.documents.detail.adding : de.documents.detail.addFile}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="secondary"
+          icon={Paperclip}
+          loading={adding}
+          onClick={() => input.current?.click()}
+          data-testid="file-add"
+        >
+          {adding ? de.documents.detail.adding : de.documents.detail.addFile}
+        </Button>
+        {onExtract && document.files.length > 0 && (
+          <Button
+            variant="secondary"
+            icon={Sparkles}
+            onClick={() => onExtract(document.files[0]?.id ?? '')}
+            data-testid="file-extract"
+          >
+            {de.documents.extract.action}
+          </Button>
+        )}
+      </div>
       {viewing && (
         <FileViewer documentId={document.id} file={viewing} onClose={() => setViewing(null)} />
       )}

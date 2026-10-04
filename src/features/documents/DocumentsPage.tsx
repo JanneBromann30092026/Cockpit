@@ -1,8 +1,16 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router';
+import { useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { Link, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { CalendarPlus, CircleHelp, Paperclip, Plus } from 'lucide-react';
-import { Badge, Button, ChoiceChip, EmptyState, SearchInput, Surface } from '@/components/ui';
+import { CalendarPlus, CircleHelp, FileUp, Paperclip, Plus } from 'lucide-react';
+import {
+  Badge,
+  Button,
+  ChoiceChip,
+  EmptyState,
+  SearchInput,
+  Surface,
+  toast,
+} from '@/components/ui';
 import { useHotkeys } from '@/app/hooks/useHotkeys';
 import { useLocalDate } from '@/app/hooks/useLocalDate';
 import { Page } from '@/app/shell/Page';
@@ -13,11 +21,14 @@ import {
   upcomingDeadlines,
   type Deadline,
 } from '@/core/documents/contracts';
+import { nameFromFileName } from '@/core/documents/extract';
 import { formatDeadlineDate, formatEuro } from '@/core/format';
 import { DOCUMENT_CATEGORIES, type DocumentCategory } from '@/data/domain';
+import { documentActions, FileRejectedError } from '@/data/repositories';
 import type { DocumentRecord } from '@/data/schemas';
 import { de } from '@/i18n/de';
 import { spring } from '@/styles/motion';
+import { AskCard } from './AskCard';
 import { CalendarDialog } from './CalendarDialog';
 import { DeadlineList } from './DeadlineList';
 import { DocumentEditor } from './DocumentEditor';
@@ -94,10 +105,19 @@ function DocumentCard({
   );
 }
 
-/** My contracts: costs, what is coming up, search and categories. */
+/** Navigation state of a contract just created from its original. */
+export interface FromFileState {
+  fromFile: string;
+  placeholder: string;
+}
+
+/** My contracts: costs, what is coming up, questions, search and categories. */
 export function DocumentsPage() {
   const today = useLocalDate();
+  const navigate = useNavigate();
   const documents = useDocuments();
+  const original = useRef<HTMLInputElement>(null);
+  const [creating, setCreating] = useState(false);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<DocumentCategory | null>(null);
   const [adding, setAdding] = useState(false);
@@ -124,6 +144,41 @@ export function DocumentsPage() {
   );
   const hasCalendarDates = documents.some(
     (document) => cancelBy(document) !== null || document.termEnd !== undefined,
+  );
+
+  const onOriginal = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setCreating(true);
+    try {
+      const name = nameFromFileName(file.name, t.fromFileFallback);
+      const created = await documentActions.createFromFile(name, {
+        name: file.name,
+        type: file.type,
+        data: new Uint8Array(await file.arrayBuffer()),
+      });
+      const state: FromFileState = { fromFile: created.file.id, placeholder: name };
+      void navigate(`/documents/${created.document.id}`, { state });
+    } catch (error: unknown) {
+      toast.error(error instanceof FileRejectedError ? t.file[error.reason] : t.file.saveFailed);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const fromOriginal = (
+    <Button
+      variant="secondary"
+      size="sm"
+      icon={FileUp}
+      loading={creating}
+      onClick={() => original.current?.click()}
+      aria-label={t.fromFileLabel}
+      data-testid="documents-from-file"
+    >
+      <span className="hidden sm:inline">{t.fromFile}</span>
+    </Button>
   );
 
   useHotkeys([
@@ -153,6 +208,7 @@ export function DocumentsPage() {
               <span className="hidden sm:inline">{t.exportAll}</span>
             </Button>
           )}
+          {documents.length > 0 && fromOriginal}
           <Button
             size="sm"
             icon={Plus}
@@ -171,9 +227,20 @@ export function DocumentsPage() {
             title={t.empty}
             text={t.emptyText}
             action={
-              <Button icon={Plus} onClick={() => setAdding(true)}>
-                {t.add}
-              </Button>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button icon={Plus} onClick={() => setAdding(true)}>
+                  {t.add}
+                </Button>
+                <Button
+                  variant="secondary"
+                  icon={FileUp}
+                  loading={creating}
+                  onClick={() => original.current?.click()}
+                  data-testid="documents-from-file-empty"
+                >
+                  {t.fromFileLabel}
+                </Button>
+              </div>
             }
           />
         ) : (
@@ -193,6 +260,8 @@ export function DocumentsPage() {
                 <DeadlineList deadlines={upcoming} />
               </Surface>
             )}
+
+            <AskCard documents={documents} today={today} />
 
             <div className="flex flex-col gap-3">
               <SearchInput
@@ -239,6 +308,14 @@ export function DocumentsPage() {
         )}
       </div>
 
+      <input
+        ref={original}
+        type="file"
+        accept="application/pdf,image/*"
+        className="hidden"
+        onChange={(event) => void onOriginal(event)}
+        data-testid="documents-file-input"
+      />
       {adding && <DocumentEditor onClose={() => setAdding(false)} />}
       {exporting && (
         <CalendarDialog documents={documents} today={today} onClose={() => setExporting(false)} />

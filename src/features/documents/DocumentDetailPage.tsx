@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import { motion } from 'motion/react';
 import {
   CalendarPlus,
@@ -7,6 +7,7 @@ import {
   CircleAlert,
   CircleHelp,
   Pencil,
+  Sparkles,
   Trash2,
   type LucideIcon,
 } from 'lucide-react';
@@ -31,12 +32,16 @@ import {
 } from '@/core/documents/contracts';
 import { daysBetween } from '@/core/dates';
 import { formatDate, formatEuro } from '@/core/format';
+import type { DocumentAiField } from '@/data/domain';
 import { documentActions } from '@/data/repositories';
 import { useDataStore } from '@/data/store';
+import { useSettings } from '@/features/settings/settingsStore';
 import { de } from '@/i18n/de';
 import { spring } from '@/styles/motion';
 import { CalendarDialog } from './CalendarDialog';
 import { DocumentEditor } from './DocumentEditor';
+import type { FromFileState } from './DocumentsPage';
+import { ExtractPanel } from './ExtractPanel';
 import { FileTiles } from './FileTiles';
 import { CATEGORY_ICONS, whenLabel } from './useDocuments';
 
@@ -67,14 +72,49 @@ function Section({
   );
 }
 
-function Row({ label, children, testId }: { label: string; children: ReactNode; testId?: string }) {
+/** Small mark for a value Claude read from the original. */
+function AiMark() {
+  return (
+    <span
+      className="ml-2 inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent"
+      data-testid="ai-mark"
+    >
+      <Sparkles size={11} aria-hidden />
+      {t.extract.mark}
+    </span>
+  );
+}
+
+function Row({
+  label,
+  children,
+  testId,
+  ai,
+}: {
+  label: string;
+  children: ReactNode;
+  testId?: string;
+  ai?: boolean;
+}) {
   return (
     <div className="flex flex-col gap-0.5 border-b border-line pb-3 last:border-0 last:pb-0">
-      <dt className="text-sm text-fg-secondary">{label}</dt>
+      <dt className="text-sm text-fg-secondary">
+        {label}
+        {ai && <AiMark />}
+      </dt>
       <dd className="text-base text-fg" data-testid={testId}>
         {children}
       </dd>
     </div>
+  );
+}
+
+function isFromFileState(value: unknown): value is FromFileState {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as Record<string, unknown>).fromFile === 'string' &&
+    typeof (value as Record<string, unknown>).placeholder === 'string'
   );
 }
 
@@ -91,12 +131,29 @@ function Note({ icon: Icon, children }: { icon: LucideIcon; children: string }) 
 export function DocumentDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const today = useLocalDate();
   const document = useDataStore((state) => state.documents[id]);
   const ready = useDataStore((state) => state.ready);
-  const [editing, setEditing] = useState(false);
+  const aiEnabled = useSettings((s) => s.aiEnabled);
+  // Just created from an original: read it with Claude (or fill in the fields by hand).
+  const [fromFile] = useState(() => (isFromFileState(location.state) ? location.state : null));
+  const [editing, setEditing] = useState(() => fromFile !== null && !aiEnabled);
   const [exporting, setExporting] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [extracting, setExtracting] = useState<{ fileId?: string; placeholder?: string } | null>(
+    () =>
+      fromFile && aiEnabled
+        ? { fileId: fromFile.fromFile, placeholder: fromFile.placeholder }
+        : null,
+  );
+
+  // Opened once: going back or reloading does not open it again.
+  useEffect(() => {
+    if (isFromFileState(location.state)) {
+      void navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.state, location.pathname, navigate]);
 
   const back = (
     <IconButton
@@ -121,6 +178,7 @@ export function DocumentDetailPage() {
   const cost = costs(document);
   const missed = cancelMissed(document, today);
   const passed = termEndPassed(document, today);
+  const ai = (field: DocumentAiField) => document.aiFields.includes(field);
 
   return (
     <Page
@@ -168,7 +226,17 @@ export function DocumentDetailPage() {
           {document.provider && (
             <span className="text-base text-fg-secondary">{document.provider}</span>
           )}
+          {(ai('name') || ai('category')) && <AiMark />}
         </div>
+        {document.aiFields.length > 0 && (
+          <p
+            className="-mt-2 flex items-start gap-2 px-1 text-sm text-fg-secondary"
+            data-testid="ai-mark-hint"
+          >
+            <Sparkles size={15} aria-hidden className="mt-0.5 shrink-0 text-accent" />
+            {t.extract.markHint}
+          </p>
+        )}
 
         <div className="grid items-start gap-6 wide:grid-cols-2">
           <div className="flex min-w-0 flex-col gap-6">
@@ -200,13 +268,15 @@ export function DocumentDetailPage() {
               {missed && <Note icon={CircleAlert}>{d.cancelMissed}</Note>}
               {passed && <Note icon={CircleAlert}>{d.termEndPassed}</Note>}
               <dl className="flex flex-col gap-3">
-                <Row label={d.nextPayment} testId="document-next-payment">
+                <Row label={d.nextPayment} testId="document-next-payment" ai={ai('dueDate')}>
                   {payment ? formatDate(payment) : d.missing}
                 </Row>
-                <Row label={d.termEnd} testId="document-term-end-value">
+                <Row label={d.termEnd} testId="document-term-end-value" ai={ai('termEnd')}>
                   {document.termEnd ? formatDate(document.termEnd) : d.missing}
                 </Row>
-                <Row label={d.noticePeriod}>{document.noticePeriod ?? d.missing}</Row>
+                <Row label={d.noticePeriod} ai={ai('noticePeriod')}>
+                  {document.noticePeriod ?? d.missing}
+                </Row>
               </dl>
               {!lastCancelDay && (document.noticePeriod || document.termEnd) && (
                 <p className="text-sm text-fg-muted">{d.noCalc}</p>
@@ -218,7 +288,11 @@ export function DocumentDetailPage() {
 
             <Section title={d.overview} testId="document-overview">
               <dl className="flex flex-col gap-3">
-                <Row label={d.amount} testId="document-amount-value">
+                <Row
+                  label={d.amount}
+                  testId="document-amount-value"
+                  ai={ai('amount') || ai('interval')}
+                >
                   {document.amount !== undefined ? (
                     <>
                       {formatEuro(document.amount)}
@@ -234,7 +308,9 @@ export function DocumentDetailPage() {
                     d.missing
                   )}
                 </Row>
-                <Row label={t.fields.provider}>{document.provider ?? d.missing}</Row>
+                <Row label={t.fields.provider} ai={ai('provider')}>
+                  {document.provider ?? d.missing}
+                </Row>
               </dl>
             </Section>
           </div>
@@ -271,13 +347,24 @@ export function DocumentDetailPage() {
               </Section>
             )}
             <Section title={d.files} testId="document-files">
-              <FileTiles document={document} />
+              <FileTiles
+                document={document}
+                onExtract={aiEnabled ? (fileId) => setExtracting({ fileId }) : undefined}
+              />
             </Section>
           </div>
         </div>
       </div>
 
       {editing && <DocumentEditor document={document} onClose={() => setEditing(false)} />}
+      {extracting && (
+        <ExtractPanel
+          document={document}
+          fileId={extracting.fileId}
+          placeholderName={extracting.placeholder}
+          onClose={() => setExtracting(null)}
+        />
+      )}
       {exporting && (
         <CalendarDialog documents={[document]} today={today} onClose={() => setExporting(false)} />
       )}

@@ -103,3 +103,61 @@ describe('contracts and their originals', () => {
     expect(Object.keys(useDataStore.getState().documents)).toEqual([real.id]);
   });
 });
+
+describe('contracts from originals and Claude', () => {
+  it('creates a contract from its original; nothing stays when the file is rejected', async () => {
+    const created = await documentActions.createFromFile('Police Hausrat', {
+      name: 'Police_Hausrat.pdf',
+      type: 'application/pdf',
+      data: bytes('%PDF-1.4'),
+    });
+    expect(created.document).toMatchObject({ name: 'Police Hausrat', category: 'other' });
+    expect(created.document.files.map((file) => file.id)).toEqual([created.file.id]);
+    await expect(
+      documentActions.createFromFile('Programm', {
+        name: 'Programm.exe',
+        type: 'application/x-msdownload',
+        data: bytes('MZ'),
+      }),
+    ).rejects.toBeInstanceOf(FileRejectedError);
+    expect(Object.keys(useDataStore.getState().documents)).toEqual([created.document.id]);
+  });
+
+  it('takes over the chosen fields with Claude marks; editing by hand removes a mark', async () => {
+    const contract = await documentActions.create({
+      name: 'Scan 0815',
+      openPoints: ['Glasbruch?'],
+    });
+    const updated = await documentActions.applyExtraction(
+      contract.id,
+      {
+        name: 'Hausratversicherung',
+        category: 'insurance',
+        amount: 89.4,
+        interval: 'yearly',
+        termEnd: '2027-01-11',
+        noticePeriod: '3 Monate zum Ablauf',
+        summary: ['Fahrrad mitversichert'],
+        openPoints: ['Zahlungstermin fehlt'],
+        removed: 0,
+      },
+      {
+        fields: ['name', 'category', 'amount', 'termEnd', 'noticePeriod'],
+        summary: true,
+        openPoints: true,
+      },
+    );
+    expect(updated).toMatchObject({
+      name: 'Hausratversicherung',
+      category: 'insurance',
+      amount: 89.4,
+      termEnd: '2027-01-11',
+      notice: { amount: 3, unit: 'months' },
+      summary: ['Fahrrad mitversichert (Claude)'],
+      openPoints: ['Glasbruch?', 'Zahlungstermin fehlt'],
+      aiFields: ['name', 'category', 'amount', 'termEnd', 'noticePeriod'],
+    });
+    expect(updated.interval).toBeUndefined();
+    expect(await rawDump()).not.toContain('Hausratversicherung');
+  });
+});

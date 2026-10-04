@@ -1,5 +1,18 @@
 import Anthropic from '@anthropic-ai/sdk';
 import {
+  buildContractExtractText,
+  CONTRACT_EXTRACT_SCHEMA,
+  CONTRACT_EXTRACT_SYSTEM_PROMPT,
+  parseContractExtraction,
+} from '@/data/prompts/contractExtract';
+import {
+  buildContractQuestionMessage,
+  CONTRACT_ANSWER_SCHEMA,
+  CONTRACT_QUESTION_SYSTEM_PROMPT,
+  parseContractAnswer,
+  type ContractQuestionRequest,
+} from '@/data/prompts/contractQuestion';
+import {
   buildDaySummaryMessage,
   DAY_SUMMARY_SYSTEM_PROMPT,
   parseDaySummary,
@@ -11,6 +24,9 @@ import {
   type AiCallOptions,
   type AiProvider,
   type ConnectionTestResult,
+  type ContractAnswerResult,
+  type ContractExtractRequest,
+  type ContractExtractResult,
   type DaySummaryResult,
 } from './types';
 
@@ -65,6 +81,9 @@ const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 const SUMMARY_MAX_TOKENS = 4096;
 /** Writing takes longer than the model lookup of the connection test. */
 const SUMMARY_TIMEOUT_MS = 45_000;
+/** Reading a whole contract (many pages, scans) takes longest. */
+const EXTRACT_MAX_TOKENS = 8192;
+const EXTRACT_TIMEOUT_MS = 120_000;
 
 function defaultClient(apiKey: string): AnthropicClientLike {
   // The key comes from this device's encrypted storage; requests go straight to
@@ -101,6 +120,7 @@ export function toAiError(error: unknown, timedOut: boolean, online: boolean): A
   if (error instanceof Anthropic.APIError) {
     const status: number | undefined = typeof error.status === 'number' ? error.status : undefined;
     if (status === 529) return new AiError('OVERLOADED', 'overloaded', status);
+    if (status === 413) return new AiError('TOO_LARGE', 'request too large', status);
     return new AiError('API_ERROR', `api error ${status ?? ''}`.trim(), status);
   }
   return new AiError('API_ERROR', error instanceof Error ? error.name : 'unknown error');
@@ -190,6 +210,84 @@ export class AnthropicProvider implements AiProvider {
     const sentences = parseDaySummary(text);
     if (sentences.length === 0) throw new AiError('INVALID_RESPONSE');
     return { sentences, model: message.model || this.model };
+  }
+
+  /** Runs a request with structured output and returns the JSON text of the answer. */
+  private async structured(
+    params: Omit<Anthropic.MessageCreateParamsNonStreaming, 'model'>,
+    options: AiCallOptions,
+    timeoutMs: number,
+  ): Promise<{ json: string; model: string }> {
+    const message = await this.call(
+      (requestOptions) => this.create({ ...params, model: this.model }, requestOptions),
+      options.signal,
+      Math.max(this.timeoutMs, timeoutMs),
+    );
+    // Check why the model stopped before reading the content.
+    if (message.stop_reason === 'refusal') throw new AiError('REFUSED');
+    if (message.stop_reason === 'max_tokens') throw new AiError('INVALID_RESPONSE');
+    const json = message.content
+      .flatMap((block) => (block.type === 'text' ? [block.text] : []))
+      .join('');
+    return { json, model: message.model || this.model };
+  }
+
+  /** A question about my contracts; only their structured fields are sent. */
+  async askContracts(
+    input: ContractQuestionRequest,
+    options: AiCallOptions = {},
+  ): Promise<ContractAnswerResult> {
+    const { json, model } = await this.structured(
+      {
+        max_tokens: SUMMARY_MAX_TOKENS,
+        system: CONTRACT_QUESTION_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: buildContractQuestionMessage(input) }],
+        output_config: { format: { type: 'json_schema', schema: CONTRACT_ANSWER_SCHEMA } },
+      },
+      options,
+      SUMMARY_TIMEOUT_MS,
+    );
+    const answer = parseContractAnswer(
+      json,
+      input.contracts.map((contract) => contract.ref),
+    );
+    if (!answer) throw new AiError('INVALID_RESPONSE');
+    return { ...answer, model };
+  }
+
+  /** Reads contract fields from one original (PDF or photo). */
+  async extractContract(
+    input: ContractExtractRequest,
+    options: AiCallOptions = {},
+  ): Promise<ContractExtractResult> {
+    const file: Anthropic.ContentBlockParam =
+      input.source.kind === 'pdf'
+        ? {
+            type: 'document',
+            source: { type: 'base64', media_type: 'application/pdf', data: input.source.data },
+          }
+        : {
+            type: 'image',
+            source: { type: 'base64', media_type: input.source.mediaType, data: input.source.data },
+          };
+    const { json, model } = await this.structured(
+      {
+        max_tokens: EXTRACT_MAX_TOKENS,
+        system: CONTRACT_EXTRACT_SYSTEM_PROMPT,
+        messages: [
+          {
+            role: 'user',
+            content: [file, { type: 'text', text: buildContractExtractText(input.today) }],
+          },
+        ],
+        output_config: { format: { type: 'json_schema', schema: CONTRACT_EXTRACT_SCHEMA } },
+      },
+      options,
+      EXTRACT_TIMEOUT_MS,
+    );
+    const extraction = parseContractExtraction(json);
+    if (!extraction) throw new AiError('INVALID_RESPONSE');
+    return { extraction, model };
   }
 
   /** Looks up the configured model: validates key, network and model without generating tokens. */
