@@ -28,6 +28,7 @@ import { upcomingDeadlines } from '@/core/documents/contracts';
 import type { DocumentRecord, Task } from '@/data/schemas';
 import { DeadlineList } from '@/features/documents/DeadlineList';
 import { useDocuments } from '@/features/documents/useDocuments';
+import { ReviewPromptCard } from '@/features/reviews/ReviewPromptCard';
 import { useGoogleClientId, useSettings } from '@/features/settings/settingsStore';
 import { TaskEditor } from '@/features/tasks/TaskEditor';
 import { TaskRow } from '@/features/tasks/TaskRow';
@@ -683,6 +684,7 @@ export function TodayPage() {
           )}
         </div>
 
+        <ReviewPromptCard now={now} today={today} />
         {!demo && !connected && hasData && sessionError === 'EXPIRED' && <ExpiredBanner />}
         {!showData && <ConnectCard error={sessionError} />}
         {(events !== null || mails !== null || dueCount > 0 || cancelSoon) && (

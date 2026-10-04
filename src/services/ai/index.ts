@@ -3,6 +3,7 @@ import { VaultLockedError } from '@/services/crypto/session';
 import { API_KEY_SECRET } from './config';
 import type { ContractQuestionRequest } from '@/data/prompts/contractQuestion';
 import type { DaySummaryRequest } from '@/data/prompts/daySummary';
+import type { DayReviewRequest, WeekReviewRequest } from '@/data/prompts/reviews';
 import {
   AiError,
   type AiCallOptions,
@@ -11,7 +12,9 @@ import {
   type ContractAnswerResult,
   type ContractExtractRequest,
   type ContractExtractResult,
+  type DayReviewResult,
   type DaySummaryResult,
+  type WeekReviewResult,
 } from './types';
 
 export {
@@ -91,6 +94,26 @@ export async function extractContractWithAi(
 ): Promise<ContractExtractResult> {
   const provider = await getAiProvider(config);
   return provider.extractContract(input, options);
+}
+
+/** Points for the daily review (sends the day's data – only on tap). */
+export async function reviewDayWithAi(
+  config: AiConfig,
+  input: DayReviewRequest,
+  options?: AiCallOptions,
+): Promise<DayReviewResult> {
+  const provider = await getAiProvider(config);
+  return provider.reviewDay(input, options);
+}
+
+/** Patterns, brakes and three changes for the weekly review (only on tap). */
+export async function reviewWeekWithAi(
+  config: AiConfig,
+  input: WeekReviewRequest,
+  options?: AiCallOptions,
+): Promise<WeekReviewResult> {
+  const provider = await getAiProvider(config);
+  return provider.reviewWeek(input, options);
 }
 
 /** Checks key, network and model (no tokens are generated, so it costs nothing). */

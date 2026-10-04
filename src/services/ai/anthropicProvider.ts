@@ -13,6 +13,18 @@ import {
   type ContractQuestionRequest,
 } from '@/data/prompts/contractQuestion';
 import {
+  buildDayReviewMessage,
+  buildWeekReviewMessage,
+  DAY_REVIEW_SCHEMA,
+  DAY_REVIEW_SYSTEM_PROMPT,
+  parseDayReview,
+  parseWeekReview,
+  WEEK_REVIEW_SCHEMA,
+  WEEK_REVIEW_SYSTEM_PROMPT,
+  type DayReviewRequest,
+  type WeekReviewRequest,
+} from '@/data/prompts/reviews';
+import {
   buildDaySummaryMessage,
   DAY_SUMMARY_SYSTEM_PROMPT,
   parseDaySummary,
@@ -27,7 +39,9 @@ import {
   type ContractAnswerResult,
   type ContractExtractRequest,
   type ContractExtractResult,
+  type DayReviewResult,
   type DaySummaryResult,
+  type WeekReviewResult,
 } from './types';
 
 interface RequestOptions {
@@ -288,6 +302,43 @@ export class AnthropicProvider implements AiProvider {
     const extraction = parseContractExtraction(json);
     if (!extraction) throw new AiError('INVALID_RESPONSE');
     return { extraction, model };
+  }
+
+  /** Points for the daily review; only the day's data and the user's points are sent. */
+  async reviewDay(input: DayReviewRequest, options: AiCallOptions = {}): Promise<DayReviewResult> {
+    const { json, model } = await this.structured(
+      {
+        max_tokens: SUMMARY_MAX_TOKENS,
+        system: DAY_REVIEW_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: buildDayReviewMessage(input) }],
+        output_config: { format: { type: 'json_schema', schema: DAY_REVIEW_SCHEMA } },
+      },
+      options,
+      SUMMARY_TIMEOUT_MS,
+    );
+    const points = parseDayReview(json);
+    if (!points) throw new AiError('INVALID_RESPONSE');
+    return { ...points, model };
+  }
+
+  /** Patterns, brakes and three changes from the week's daily reviews. */
+  async reviewWeek(
+    input: WeekReviewRequest,
+    options: AiCallOptions = {},
+  ): Promise<WeekReviewResult> {
+    const { json, model } = await this.structured(
+      {
+        max_tokens: SUMMARY_MAX_TOKENS,
+        system: WEEK_REVIEW_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: buildWeekReviewMessage(input) }],
+        output_config: { format: { type: 'json_schema', schema: WEEK_REVIEW_SCHEMA } },
+      },
+      options,
+      SUMMARY_TIMEOUT_MS,
+    );
+    const points = parseWeekReview(json);
+    if (!points) throw new AiError('INVALID_RESPONSE');
+    return { ...points, model };
   }
 
   /** Looks up the configured model: validates key, network and model without generating tokens. */

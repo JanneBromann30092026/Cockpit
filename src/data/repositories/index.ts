@@ -12,3 +12,4 @@ export {
   type DocumentPatch,
   type NewFile,
 } from './documentActions';
+export { reviewActions, type ChangeTasks, type ReviewDraft } from './reviewActions';

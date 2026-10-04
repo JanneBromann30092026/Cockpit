@@ -162,6 +162,10 @@ export const reviewFields = {
   patterns: points,
   brakes: points,
   changes: textList(LIMITS.item, LIMITS.weeklyChanges).default([]),
+  /** When the review was finished (a started review is a draft). */
+  doneAt: timestamp.optional(),
+  /** Weekly review: the tasks created from the three changes (same order). */
+  changeTaskIds: z.array(id).max(LIMITS.weeklyChanges).default([]),
 };
 export const reviewSchema = z.object({ ...base, ...reviewFields });
 export type Review = z.output<typeof reviewSchema>;

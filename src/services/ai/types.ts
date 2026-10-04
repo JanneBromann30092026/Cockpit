@@ -2,6 +2,12 @@ import type { ContractExtraction } from '@/core/documents/extract';
 import type { DocumentCategory } from '@/data/domain';
 import type { ContractAnswer, ContractQuestionRequest } from '@/data/prompts/contractQuestion';
 import type { DaySummaryRequest } from '@/data/prompts/daySummary';
+import type {
+  DayReviewPoints,
+  DayReviewRequest,
+  WeekReviewPoints,
+  WeekReviewRequest,
+} from '@/data/prompts/reviews';
 
 export interface ConnectionTestResult {
   model: string;
@@ -35,6 +41,14 @@ export interface ContractExtractResult {
   model: string;
 }
 
+export interface DayReviewResult extends DayReviewPoints {
+  model: string;
+}
+
+export interface WeekReviewResult extends WeekReviewPoints {
+  model: string;
+}
+
 export interface AiCallOptions {
   /** Cancels the request (e.g. when the user leaves the page). */
   signal?: AbortSignal;
@@ -61,6 +75,10 @@ export interface AiProvider {
     input: ContractExtractRequest,
     options?: AiCallOptions,
   ): Promise<ContractExtractResult>;
+  /** Points for the daily review from the day's data (only on explicit tap). */
+  reviewDay(input: DayReviewRequest, options?: AiCallOptions): Promise<DayReviewResult>;
+  /** Patterns, brakes and three changes from the week's daily reviews (only on tap). */
+  reviewWeek(input: WeekReviewRequest, options?: AiCallOptions): Promise<WeekReviewResult>;
 }
 
 export const AI_ERROR_CODES = [

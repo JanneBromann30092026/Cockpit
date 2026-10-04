@@ -8,6 +8,11 @@ import {
   type ContractQuestionRequest,
 } from '@/data/prompts/contractQuestion';
 import { CONTRACT_EXTRACT_SCHEMA } from '@/data/prompts/contractExtract';
+import {
+  DAY_REVIEW_SCHEMA,
+  DAY_REVIEW_SYSTEM_PROMPT,
+  WEEK_REVIEW_SYSTEM_PROMPT,
+} from '@/data/prompts/reviews';
 
 const MODEL = 'claude-haiku-4-5-20251001';
 
@@ -313,5 +318,70 @@ describe('AnthropicProvider.extractContract', () => {
     expect(
       toAiError(new Anthropic.APIError(413, {}, 'request too large', headers), false, true).code,
     ).toBe('TOO_LARGE');
+  });
+});
+
+describe('AnthropicProvider reviews', () => {
+  const dayInput = {
+    date: 'Montag, 5. Oktober 2026',
+    events: null,
+    done: [],
+    open: [],
+    current: { wentWell: [], notWell: [], improve: [] },
+  };
+
+  it('day: own system prompt, structured output, parsed points', async () => {
+    const create = vi.fn(() =>
+      Promise.resolve(
+        answer(
+          JSON.stringify({
+            gut_gelaufen: ['Sport'],
+            nicht_gut: [],
+            besser_machen: ['Früher ins Bett'],
+          }),
+        ),
+      ),
+    );
+    const result = await provider(notExpected, { create }).reviewDay(dayInput);
+    expect(result).toEqual({
+      wentWell: ['Sport'],
+      notWell: [],
+      improve: ['Früher ins Bett'],
+      model: MODEL,
+    });
+    const [params] = create.mock.calls[0] as unknown as [Anthropic.MessageCreateParamsNonStreaming];
+    expect(params.system).toBe(DAY_REVIEW_SYSTEM_PROMPT);
+    expect(params.output_config?.format?.schema).toBe(DAY_REVIEW_SCHEMA);
+  });
+
+  it('week: three changes; an empty or refused answer is an error', async () => {
+    const weekInput = {
+      week: 'Mo., 28.09. – So., 04.10. 2026',
+      days: [],
+      doneCount: 0,
+      open: [],
+      current: { patterns: [], brakes: [], changes: [] },
+    };
+    const create = vi.fn(() =>
+      Promise.resolve(
+        answer(
+          JSON.stringify({ muster: [], bremsen: ['Handy'], aenderungen: ['A', 'B', 'C', 'D'] }),
+        ),
+      ),
+    );
+    const result = await provider(notExpected, { create }).reviewWeek(weekInput);
+    expect(result.changes).toEqual(['A', 'B', 'C']);
+    const [params] = create.mock.calls[0] as unknown as [Anthropic.MessageCreateParamsNonStreaming];
+    expect(params.system).toBe(WEEK_REVIEW_SYSTEM_PROMPT);
+    const empty = vi.fn(() =>
+      Promise.resolve(answer(JSON.stringify({ muster: [], bremsen: [], aenderungen: [] }))),
+    );
+    await expect(
+      provider(notExpected, { create: empty }).reviewWeek(weekInput),
+    ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+    const refused = vi.fn(() => Promise.resolve(answer('', 'refusal')));
+    await expect(
+      provider(notExpected, { create: refused }).reviewDay(dayInput),
+    ).rejects.toMatchObject({ code: 'REFUSED' });
   });
 });

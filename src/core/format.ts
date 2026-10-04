@@ -36,6 +36,16 @@ const FULL_DATE = new Intl.DateTimeFormat('de-DE', {
   timeZone: 'UTC',
 });
 
+const LONG_DATE = new Intl.DateTimeFormat('de-DE', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+const WEEKDAY = new Intl.DateTimeFormat('de-DE', { weekday: 'short', timeZone: 'UTC' });
+
 function utcDate(date: string): Date {
   const [y = 1970, m = 1, d = 1] = date.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d));
@@ -50,6 +60,16 @@ export function formatShortDate(date: string): string {
 export function formatDeadlineDate(date: string, today: string): string {
   const days = (utcDate(date).getTime() - utcDate(today).getTime()) / 86_400_000;
   return days >= 0 && days <= 180 ? formatShortDate(date) : formatDate(date);
+}
+
+/** "2026-10-07" → "Mittwoch, 7. Oktober 2026" */
+export function formatLongDate(date: string): string {
+  return LONG_DATE.format(utcDate(date));
+}
+
+/** "2026-10-07" → "Mi" */
+export function formatWeekday(date: string): string {
+  return WEEKDAY.format(utcDate(date)).replace('.', '');
 }
 
 /** "2026-10-07" → "07.10.2026" */

@@ -5,6 +5,8 @@ export const spring = {
   default: { type: 'spring', stiffness: 300, damping: 30 },
   soft: { type: 'spring', stiffness: 170, damping: 26 },
   snappy: { type: 'spring', stiffness: 500, damping: 35 },
+  /** Key moments only (e.g. a finished review). */
+  bouncy: { type: 'spring', stiffness: 420, damping: 16 },
 } as const satisfies Record<string, Transition>;
 
 /** Durations in seconds (motion) – 150/250/400 ms. */

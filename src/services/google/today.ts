@@ -47,7 +47,10 @@ const eventsSchema = z.object({
     .default([]),
 });
 
-/** Today's events of every calendar that is shown in Google Calendar. */
+/**
+ * The events of the local day around `now` (today for "Heute", any day for a review) of
+ * every calendar that is shown in Google Calendar.
+ */
 export async function fetchTodayEvents(
   now: Date,
   untitled: string,

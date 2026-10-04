@@ -10,7 +10,8 @@ import { requireRecord, validateRecord } from './recordsRepo';
 import { commit } from './rows';
 import { demoDocumentPdf, type DemoDocument } from '../demo/documents';
 import { documentActions } from './documentActions';
-import { documentsRepo, tasksRepo } from './records';
+import { documentsRepo, reviewsRepo, tasksRepo } from './records';
+import type { DemoReview } from '../demo/reviews';
 
 export type TaskInput = Parameters<typeof tasksRepo.create>[0];
 export type TaskPatch = Partial<Pick<Task, 'title' | 'dueDate' | 'priority' | 'notes'>>;
@@ -78,6 +79,18 @@ export const demoActions = {
       }
     }
     return demos.length;
+  },
+
+  /** Invented reviews; a day that already has a review is left alone. */
+  async createReviews(demos: readonly DemoReview[]): Promise<number> {
+    const existing = new Set(
+      Object.values(useDataStore.getState().reviews).map(
+        (review) => `${review.kind}:${review.date}`,
+      ),
+    );
+    const fresh = demos.filter((demo) => !existing.has(`${demo.kind}:${demo.date}`));
+    for (const demo of fresh) await reviewsRepo.create({ ...demo, demo: true });
+    return fresh.length;
   },
 
   count(): number {

@@ -199,6 +199,24 @@ async function mockAnthropic(page: Page) {
   const answer = (body: { system?: unknown; messages?: { content?: unknown }[] }) => {
     const system = typeof body.system === 'string' ? body.system : '';
     if (system.startsWith('Du liest einen Vertrag')) return JSON.stringify(extraction);
+    if (system.startsWith('Du hilfst einer Person bei ihrem Tages-Review')) {
+      return JSON.stringify({
+        gut_gelaufen: ['Die Gliederung der Hausarbeit ist fertig geworden'],
+        nicht_gut: ['Die Steuererklärung liegt seit zwei Tagen'],
+        besser_machen: ['Morgen als Erstes die Steuererklärung abschicken'],
+      });
+    }
+    if (system.startsWith('Du hilfst einer Person bei ihrem Wochen-Review')) {
+      return JSON.stringify({
+        muster: ['An Sporttagen lief das Lernen leichter'],
+        bremsen: ['Das Handy lag beim Lernen in Reichweite'],
+        aenderungen: [
+          'Handy beim Lernen in die Schublade',
+          'Jedes Meeting mit Agenda und Endzeit',
+          'Sonntags 15 Minuten die Woche planen',
+        ],
+      });
+    }
     if (system.startsWith('Du beantwortest Fragen')) {
       const content = body.messages?.[0]?.content;
       const contracts = (
@@ -352,6 +370,8 @@ async function createDemoData(page: Page) {
   await section.getByTestId('dev-demo-count').filter({ hasText: '9 Demo-Einträge' }).waitFor();
   await section.getByTestId('dev-demo-documents').click();
   await section.getByTestId('dev-demo-count').filter({ hasText: '15 Demo-Einträge' }).waitFor();
+  await section.getByTestId('dev-demo-reviews').click();
+  await section.getByTestId('dev-demo-count').filter({ hasText: '21 Demo-Einträge' }).waitFor();
 }
 
 async function demoTasks(page: Page) {
@@ -459,6 +479,66 @@ async function documentExtracted(page: Page) {
   await page.waitForTimeout(3200); // let the toast disappear
 }
 
+/** Demo data for a filtered run (SHOTS=reviews) that skipped the earlier shots. */
+async function ensureDemoReviews(page: Page) {
+  if ((await page.getByTestId('review-row').count()) === 0) {
+    await createDemoData(page);
+    await page.goto(`${PREVIEW_URL}#/reviews`);
+    await page.waitForTimeout(3200); // let the toasts disappear
+  }
+  await page.getByTestId('review-row').first().waitFor();
+}
+
+async function reviewsDemo(page: Page) {
+  await ensureDemoReviews(page);
+  await page.waitForTimeout(3200); // let the toasts disappear
+}
+
+async function reviewDay(page: Page) {
+  await ensureDemoReviews(page);
+  await page.goto(`${PREVIEW_URL}#/reviews/day/today`);
+  const well = page.getByTestId('review-went-well');
+  await well.getByTestId('review-went-well-input').fill('Gliederung der Hausarbeit steht');
+  await well.getByTestId('review-went-well-input').press('Enter');
+  await page.getByTestId('review-suggestion').first().click();
+  await page.getByTestId('review-note').fill('Viel geschafft, abends müde.');
+  await page
+    .getByTestId('review-autosave')
+    .filter({ hasText: 'Gespeichert' })
+    .waitFor({ state: 'attached' });
+  await page.locator('[data-scroll-container]').evaluate((element) => {
+    element.scrollTop = 0;
+  });
+}
+
+async function reviewDayAi(page: Page) {
+  await ensureAi(page);
+  await page.goto(`${PREVIEW_URL}#/reviews/day/today`);
+  await page.getByTestId('review-ai-evaluate').click();
+  await page.getByTestId('review-proposal').waitFor();
+  await page
+    .getByTestId('review-ai')
+    .evaluate((element) => element.scrollIntoView({ block: 'center' }));
+}
+
+async function reviewWeek(page: Page) {
+  await ensureDemoReviews(page);
+  await page.goto(`${PREVIEW_URL}#/reviews/week/current`);
+  await page.getByTestId('review-patterns').getByTestId('review-suggestion').first().click();
+  await page.getByTestId('review-brakes').getByTestId('review-suggestion').first().click();
+  const changes = page.getByTestId('review-changes');
+  await changes.getByTestId('review-suggestion').first().click();
+  await changes.getByTestId('review-suggestion').first().click();
+  await page.getByTestId('review-change-3').fill('Sonntags 15 Minuten die Woche planen');
+}
+
+async function reviewWeekDone(page: Page) {
+  await reviewWeek(page);
+  await page.getByTestId('review-finish').click();
+  await page.getByTestId('review-completed').waitFor();
+  await page.waitForTimeout(900); // the check mark settles
+}
+
 async function taskMenu(page: Page) {
   await page.getByTestId('task-menu').first().click();
 }
@@ -525,6 +605,11 @@ const SHOTS: Shot[] = [
   { route: '/documents', name: 'documents-extract', prepare: documentFromOriginal },
   { route: '/documents', name: 'documents-extract-review', prepare: documentExtractReview },
   { route: '/documents', name: 'documents-extracted', prepare: documentExtracted, scroll: true },
+  { route: '/reviews', name: 'reviews-demo', prepare: reviewsDemo, scroll: true },
+  { route: '/reviews', name: 'reviews-day', prepare: reviewDay, scroll: true },
+  { route: '/reviews', name: 'reviews-day-ai', prepare: reviewDayAi },
+  { route: '/reviews', name: 'reviews-week', prepare: reviewWeek, scroll: true },
+  { route: '/reviews', name: 'reviews-week-done', prepare: reviewWeekDone },
   { route: '/dev/ui', name: 'dev-modal', prepare: click('Modal öffnen') },
   { route: '/dev/ui', name: 'dev-sheet', prepare: click('Bottom Sheet öffnen') },
   { route: '/dev/ui', name: 'dev-side-panel', prepare: click('Seitenpanel öffnen') },

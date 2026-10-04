@@ -3,6 +3,7 @@
  * which fields to take over by default, and the change to the contract. Nothing is taken
  * over without the user's tap; Claude's summary points are marked "(Claude)".
  */
+import { withAiMark } from '../aiMark';
 import { parseNotice, type Notice, type PaymentInterval } from './contracts';
 
 export const EXTRACT_FIELDS = [
@@ -49,7 +50,7 @@ export interface ExtractTarget<Category extends string = string> {
   aiFields: ExtractField[];
 }
 
-export const AI_MARK = '(Claude)';
+export { AI_MARK } from '../aiMark';
 const SUMMARY_MAX = 5;
 
 const SENSITIVE: RegExp[] = [
@@ -149,9 +150,7 @@ export function extractionPatch<Category extends string>(
     patch.notice = parseNotice(extraction.noticePeriod) ?? undefined;
   }
   if (choice.summary && extraction.summary.length > 0) {
-    patch.summary = extraction.summary
-      .slice(0, SUMMARY_MAX)
-      .map((point) => (point.endsWith(AI_MARK) ? point : `${point} ${AI_MARK}`));
+    patch.summary = extraction.summary.slice(0, SUMMARY_MAX).map(withAiMark);
   }
   if (choice.openPoints && extraction.openPoints.length > 0) {
     patch.openPoints = unique([...target.openPoints, ...extraction.openPoints]);
