@@ -83,3 +83,64 @@ export async function decryptJson(key: CryptoKey, payload: unknown, aad: string)
   }
   return JSON.parse(decoder.decode(plaintext)) as unknown;
 }
+
+/** Encrypts raw bytes (file contents) – same envelope and AAD binding as encryptJson. */
+export async function encryptBytes(
+  key: CryptoKey,
+  data: Uint8Array<ArrayBuffer>,
+  aad: string,
+): Promise<EncryptedPayload> {
+  const iv = randomBytes(IV_BYTES);
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv, additionalData: utf8(aad) },
+    key,
+    data,
+  );
+  return { v: CRYPTO_FORMAT_VERSION, iv, ct: new Uint8Array(ciphertext) };
+}
+
+export async function decryptBytes(
+  key: CryptoKey,
+  payload: unknown,
+  aad: string,
+): Promise<Uint8Array<ArrayBuffer>> {
+  const { iv, ct } = parseEncryptedPayload(payload);
+  try {
+    return new Uint8Array(
+      await crypto.subtle.decrypt({ name: 'AES-GCM', iv, additionalData: utf8(aad) }, key, ct),
+    );
+  } catch {
+    throw new DecryptionError('Decryption failed (wrong key or modified data)');
+  }
+}
+
+/**
+ * A fresh random key for one file. Its bytes are stored inside the encrypted contract
+ * (envelope encryption), so a password change never has to re-encrypt large files.
+ */
+export function newFileKeyBytes(): Bytes {
+  return randomBytes(KEY_BITS / 8);
+}
+
+export function importFileKey(raw: Uint8Array<ArrayBuffer>): Promise<CryptoKey> {
+  return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM', length: KEY_BITS }, false, [
+    'encrypt',
+    'decrypt',
+  ]);
+}
+
+export function bytesToBase64(data: Uint8Array): string {
+  let binary = '';
+  const chunk = 0x8000;
+  for (let index = 0; index < data.length; index += chunk) {
+    binary += String.fromCharCode(...data.subarray(index, index + chunk));
+  }
+  return btoa(binary);
+}
+
+export function base64ToBytes(value: string): Uint8Array<ArrayBuffer> {
+  const binary = atob(value);
+  const data = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) data[index] = binary.charCodeAt(index);
+  return data;
+}

@@ -12,11 +12,13 @@ import {
   type TightSpot,
 } from '../calendar/events';
 import { daysBetween } from '../dates';
+import { cancelBy, type ContractInfo } from '../documents/contracts';
 import type { Mail } from '../mail/classify';
 import { compareDueTasks, isDue, type TaskInfo } from '../tasks/tasks';
 
 export type Focus<T extends TaskInfo = TaskInfo> =
   | { kind: 'task'; task: T; overdueDays: number }
+  | { kind: 'cancel'; contract: ContractInfo; date: string; days: number }
   | { kind: 'mail'; mail: Mail }
   | { kind: 'event'; event: CalendarEvent; now: boolean }
   | { kind: 'none' };
@@ -60,18 +62,39 @@ export interface OverviewInput<T extends TaskInfo = TaskInfo> {
   mails: readonly Mail[] | null;
   /** All tasks (only the open, due ones count). */
   tasks?: readonly T[];
+  /** My contracts (only a cancel deadline within a week counts). */
+  contracts?: readonly ContractInfo[];
+}
+
+/** A latest day to cancel this close is worth the top spot. */
+export const CANCEL_FOCUS_DAYS = 7;
+
+function nextCancel(
+  contracts: readonly ContractInfo[],
+  today: string,
+): { contract: ContractInfo; date: string; days: number } | null {
+  let best: { contract: ContractInfo; date: string; days: number } | null = null;
+  for (const contract of contracts) {
+    const date = cancelBy(contract);
+    if (!date || date < today) continue;
+    const days = daysBetween(today, date);
+    if (days > CANCEL_FOCUS_DAYS) continue;
+    if (!best || date < best.date) best = { contract, date, days };
+  }
+  return best;
 }
 
 /**
- * Most important first: an overdue high-priority task, a person waiting with a question or
- * deadline, a high-priority task due today, the running or next event, any other due task,
- * a mail from a person.
+ * Most important first: an overdue high-priority task, the last days to cancel a contract,
+ * a person waiting with a question or deadline, a high-priority task due today, the running
+ * or next event, any other due task, a mail from a person.
  */
 function pickFocus<T extends TaskInfo>(
   now: Date,
   events: readonly CalendarEvent[],
   mails: readonly Mail[],
   due: readonly T[],
+  contracts: readonly ContractInfo[],
 ): Focus<T> {
   const today = localDate(now);
   const taskFocus = (task: T): Focus<T> => ({
@@ -82,6 +105,8 @@ function pickFocus<T extends TaskInfo>(
   const high = due.filter((task) => task.priority === 'high');
   const overdueHigh = high.find((task) => (task.dueDate ?? today) < today);
   if (overdueHigh) return taskFocus(overdueHigh);
+  const cancel = nextCancel(contracts, today);
+  if (cancel) return { kind: 'cancel', ...cancel };
   const urgent = mails
     .filter((mail) => mail.rank === 0)
     .sort((a, b) => Number(b.deadline) - Number(a.deadline) || b.receivedAt - a.receivedAt);
@@ -100,6 +125,7 @@ export function overviewFacts<T extends TaskInfo>({
   events,
   mails,
   tasks = [],
+  contracts = [],
 }: OverviewInput<T>): OverviewFacts<T> {
   const today = localDate(now);
   const due = tasks.filter((task) => isDue(task, today)).sort(compareDueTasks);
@@ -131,7 +157,7 @@ export function overviewFacts<T extends TaskInfo>({
       }
     : null;
   return {
-    focus: pickFocus(now, sorted ?? [], mails ?? [], due),
+    focus: pickFocus(now, sorted ?? [], mails ?? [], due, contracts),
     schedule,
     mails: mailFacts,
     tasks: {

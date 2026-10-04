@@ -1,5 +1,5 @@
 import { Dexie, type EntityTable } from 'dexie';
-import type { EncryptedRow, MetaEntry, SecretRow, Setting } from './types';
+import type { EncryptedRow, FileRow, MetaEntry, SecretRow, Setting } from './types';
 
 /** Own name: Kompass and Synapse run on the same origin (GitHub Pages) with their own DBs. */
 export const DB_NAME = 'cockpit';
@@ -17,6 +17,7 @@ export class CockpitDb extends Dexie {
   library!: EntityTable<EncryptedRow, 'id'>;
   brand!: EntityTable<EncryptedRow, 'id'>;
   secrets!: EntityTable<SecretRow, 'key'>;
+  files!: EntityTable<FileRow, 'id'>;
 
   constructor(name = DB_NAME) {
     super(name);
@@ -36,7 +37,6 @@ export class CockpitDb extends Dexie {
     });
 
     // Step 2: vault parameters and the encrypted tables (new tables, nothing to migrate).
-    // Files (PDFs, photos) get their own table with step 6.
     this.version(2).stores({
       meta: 'key',
       tasks: 'id, updatedAt',
@@ -45,6 +45,12 @@ export class CockpitDb extends Dexie {
       library: 'id, updatedAt',
       brand: 'id, updatedAt',
       secrets: 'key',
+    });
+
+    // Step 6: encrypted originals (PDFs, photos) of contracts – a new table, nothing to
+    // migrate. Indexed by contract, so deleting a contract removes its files.
+    this.version(3).stores({
+      files: 'id, documentId, updatedAt',
     });
   }
 }

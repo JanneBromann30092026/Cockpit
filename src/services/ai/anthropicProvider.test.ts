@@ -144,6 +144,7 @@ const day: DaySummaryRequest = {
   events: [{ time: '10:00–11:30', title: 'Vorlesung' }],
   mails: { important: [], people: [], updates: [], newsletters: 3 },
   tasks: [],
+  deadlines: [],
 };
 
 function answer(text: string, stopReason = 'end_turn'): Anthropic.Message {

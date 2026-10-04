@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ListPlus, Trash2 } from 'lucide-react';
+import { FilePlus, ListPlus, Trash2 } from 'lucide-react';
 import { Badge, Button, Surface, toast } from '@/components/ui';
 import { useLocalDate } from '@/app/hooks/useLocalDate';
+import { demoDocuments } from '@/data/demo/documents';
 import { demoTaskInputs } from '@/data/demo/tasks';
 import { demoActions } from '@/data/repositories';
 import { useDataStore } from '@/data/store';
@@ -15,6 +16,7 @@ export function DemoDataSection() {
   const [busy, setBusy] = useState(false);
   // Re-render on every data change; the count itself comes from the repository.
   useDataStore((state) => state.tasks);
+  useDataStore((state) => state.documents);
   const count = demoActions.count();
 
   const run = async (action: () => Promise<string>) => {
@@ -45,6 +47,19 @@ export function DemoDataSection() {
             data-testid="dev-demo-tasks"
           >
             {t.createTasks}
+          </Button>
+          <Button
+            variant="secondary"
+            icon={FilePlus}
+            loading={busy}
+            onClick={() =>
+              void run(async () =>
+                t.createdDocuments(await demoActions.createDocuments(demoDocuments(today))),
+              )
+            }
+            data-testid="dev-demo-documents"
+          >
+            {t.createDocuments}
           </Button>
           <Button
             variant="secondary"

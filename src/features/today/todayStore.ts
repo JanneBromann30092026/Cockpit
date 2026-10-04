@@ -5,6 +5,8 @@
 import { create } from 'zustand';
 import type { CalendarEvent } from '@/core/calendar/events';
 import { daysBetween, localIsoDate } from '@/core/dates';
+import { upcomingDeadlines, type ContractInfo } from '@/core/documents/contracts';
+import { formatShortDate } from '@/core/format';
 import { dueTasks, type TaskInfo } from '@/core/tasks/tasks';
 import { mailGroup, type Mail } from '@/core/mail/classify';
 import type { DaySummaryMail, DaySummaryRequest } from '@/data/prompts/daySummary';
@@ -132,6 +134,11 @@ export function loadDemoDay(now = new Date()): void {
 }
 
 const SUMMARY_PRIORITY = { high: 'hoch', medium: 'mittel', low: 'niedrig' } as const;
+const SUMMARY_DEADLINE = {
+  cancel: 'kündigen bis',
+  termEnd: 'Laufzeit endet',
+  payment: 'Zahlung',
+} as const;
 
 const dateTimeFormat = new Intl.DateTimeFormat('de-DE', {
   weekday: 'long',
@@ -158,6 +165,7 @@ export function daySummaryRequest(
   events: readonly CalendarEvent[] | null,
   mails: readonly Mail[] | null,
   tasks: readonly TaskInfo[] = [],
+  contracts: readonly ContractInfo[] = [],
 ): DaySummaryRequest {
   const today = localIsoDate(now);
   const byGroup = (group: ReturnType<typeof mailGroup>) =>
@@ -185,6 +193,11 @@ export function daySummaryRequest(
       priority: SUMMARY_PRIORITY[task.priority],
       overdueDays: Math.max(0, daysBetween(task.dueDate ?? today, today)),
     })),
+    deadlines: upcomingDeadlines(contracts, today).map((deadline) => ({
+      name: deadline.contract.name,
+      kind: SUMMARY_DEADLINE[deadline.kind],
+      date: formatShortDate(deadline.date),
+    })),
   };
 }
 
@@ -192,6 +205,7 @@ export function daySummaryRequest(
 export async function summarizeToday(
   config: AiConfig,
   tasks: readonly TaskInfo[],
+  contracts: readonly ContractInfo[],
   now = new Date(),
 ): Promise<void> {
   const { events, mails } = useToday.getState();
@@ -200,9 +214,13 @@ export async function summarizeToday(
   summaryController = current;
   useToday.setState({ summary: { status: 'loading' } });
   try {
-    const result = await summarizeDayWithAi(config, daySummaryRequest(now, events, mails, tasks), {
-      signal: current.signal,
-    });
+    const result = await summarizeDayWithAi(
+      config,
+      daySummaryRequest(now, events, mails, tasks, contracts),
+      {
+        signal: current.signal,
+      },
+    );
     if (summaryController !== current) return;
     useToday.setState({ summary: { status: 'done', summary: result } });
   } catch (error: unknown) {

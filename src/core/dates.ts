@@ -38,3 +38,13 @@ export function weekday(date: string): number {
 export function nextMonday(date: string): string {
   return addDays(date, 7 - weekday(date));
 }
+
+/** Adds months; the day is clamped to the end of the month (31 Jan + 1 → 28/29 Feb). */
+export function addMonths(date: string, months: number): string {
+  const [y = 1970, m = 1, d = 1] = date.split('-').map(Number);
+  const total = y * 12 + (m - 1) + months;
+  const year = Math.floor(total / 12);
+  const month = total - year * 12;
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  return fromUtc(Date.UTC(year, month, Math.min(d, lastDay)));
+}

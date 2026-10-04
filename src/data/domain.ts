@@ -24,6 +24,14 @@ export const DOCUMENT_CATEGORIES = [
 ] as const;
 export type DocumentCategory = (typeof DOCUMENT_CATEGORIES)[number];
 
+/** How often a contract amount is paid. */
+export const PAYMENT_INTERVALS = ['monthly', 'quarterly', 'halfYearly', 'yearly', 'once'] as const;
+export type PaymentInterval = (typeof PAYMENT_INTERVALS)[number];
+
+/** Units of a computable notice period. */
+export const NOTICE_UNITS = ['days', 'weeks', 'months'] as const;
+export type NoticeUnit = (typeof NOTICE_UNITS)[number];
+
 export const REVIEW_KINDS = ['daily', 'weekly'] as const;
 export type ReviewKind = (typeof REVIEW_KINDS)[number];
 

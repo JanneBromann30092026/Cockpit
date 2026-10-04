@@ -28,3 +28,25 @@ describe('formatBytes', () => {
     expect(formatBytes(Number.POSITIVE_INFINITY)).toBe('–');
   });
 });
+
+describe('dates and amounts', () => {
+  it('formats calendar dates and euros', async () => {
+    const { formatDate, formatEuro, formatShortDate } = await import('./format');
+    expect(formatShortDate('2026-10-07')).toBe('Mi., 07.10.');
+    expect(formatDate('2026-10-07')).toBe('07.10.2026');
+    expect(formatEuro(19.9).replace(/\s/g, ' ')).toBe('19,90 €');
+  });
+
+  it('reads amounts as typed on a German keyboard', async () => {
+    const { amountInput, parseAmount } = await import('./format');
+    expect(parseAmount('19,99')).toBe(19.99);
+    expect(parseAmount('1.234,50 €')).toBe(1234.5);
+    expect(parseAmount('1234.5')).toBe(1234.5);
+    expect(parseAmount('1.234')).toBe(1234);
+    expect(parseAmount('12,345')).toBeNull();
+    expect(parseAmount('-5')).toBeNull();
+    expect(parseAmount('abc')).toBeNull();
+    expect(amountInput(19.9)).toBe('19,90');
+    expect(amountInput(850)).toBe('850');
+  });
+});

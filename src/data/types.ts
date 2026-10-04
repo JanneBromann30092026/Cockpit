@@ -28,3 +28,14 @@ export interface SecretRow {
   updatedAt: string;
   payload: EncryptedPayload;
 }
+
+/**
+ * Encrypted original (PDF or photo) of a contract. Readable: id, the contract id and
+ * updatedAt; the content is encrypted with the file's own key (kept in the contract).
+ */
+export interface FileRow {
+  id: string;
+  documentId: string;
+  updatedAt: string;
+  payload: EncryptedPayload;
+}

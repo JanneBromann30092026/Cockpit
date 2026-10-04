@@ -24,7 +24,10 @@ import { eventTiming, localDate, tightSpots, type CalendarEvent } from '@/core/c
 import { mailGroup, type Mail, type MailGroup } from '@/core/mail/classify';
 import { compareOpenTasks, dueTasks } from '@/core/tasks/tasks';
 import { overviewFacts } from '@/core/today/overview';
-import type { Task } from '@/data/schemas';
+import { upcomingDeadlines } from '@/core/documents/contracts';
+import type { DocumentRecord, Task } from '@/data/schemas';
+import { DeadlineList } from '@/features/documents/DeadlineList';
+import { useDocuments } from '@/features/documents/useDocuments';
 import { useGoogleClientId, useSettings } from '@/features/settings/settingsStore';
 import { TaskEditor } from '@/features/tasks/TaskEditor';
 import { TaskRow } from '@/features/tasks/TaskRow';
@@ -353,7 +356,15 @@ function MailsCard({ now }: { now: Date }) {
   );
 }
 
-function OverviewCard({ now, tasks }: { now: Date; tasks: readonly Task[] }) {
+function OverviewCard({
+  now,
+  tasks,
+  contracts,
+}: {
+  now: Date;
+  tasks: readonly Task[];
+  contracts: readonly DocumentRecord[];
+}) {
   const events = useToday((s) => s.events);
   const mails = useToday((s) => s.mails);
   const calendarError = useToday((s) => s.calendarError);
@@ -365,11 +376,12 @@ function OverviewCard({ now, tasks }: { now: Date; tasks: readonly Task[] }) {
   const byClaude = summary.status === 'done';
   const sentences = byClaude
     ? summary.summary.sentences
-    : overviewSentences(overviewFacts({ now, events, mails, tasks }), {
+    : overviewSentences(overviewFacts({ now, events, mails, tasks, contracts }), {
         calendarFailed: calendarError !== null,
         gmailFailed: gmailError !== null,
       });
-  const summarize = () => void summarizeToday({ enabled: aiEnabled, model: aiModel }, tasks, now);
+  const summarize = () =>
+    void summarizeToday({ enabled: aiEnabled, model: aiModel }, tasks, contracts, now);
 
   return (
     <motion.section
@@ -552,29 +564,34 @@ function TasksDueCard({ tasks, today }: { tasks: readonly Task[]; today: string 
   );
 }
 
-/** A section a later roadmap step fills in. */
-function LaterCard({
-  icon: Icon,
-  title,
-  text,
-  step,
+/** Cancel dates and term ends within 30 days, payments within a week. */
+function DeadlinesCard({
+  contracts,
+  today,
 }: {
-  icon: LucideIcon;
-  title: string;
-  text: string;
-  step: number;
+  contracts: readonly DocumentRecord[];
+  today: string;
 }) {
+  const navigate = useNavigate();
+  const upcoming = upcomingDeadlines(contracts, today);
   return (
-    <Surface tone="sunken" className="flex items-start gap-4 shadow-none">
-      <Icon size={22} aria-hidden className="mt-0.5 shrink-0 text-fg-muted" />
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-base font-semibold text-fg">{title}</h2>
-          <Badge tone="signal">{de.comingSoon.badge(step)}</Badge>
-        </div>
-        <p className="text-sm text-fg-secondary">{text}</p>
+    <Card
+      icon={FileText}
+      title={t.documents.title}
+      count={upcoming.length}
+      testId="today-deadlines"
+    >
+      {upcoming.length === 0 ? (
+        <CardNote>{t.documents.empty}</CardNote>
+      ) : (
+        <DeadlineList deadlines={upcoming} className="px-3 pb-3" />
+      )}
+      <div className="flex flex-wrap gap-2 border-t border-line px-4 py-3">
+        <Button size="sm" variant="ghost" onClick={() => void navigate('/documents')}>
+          {t.documents.all}
+        </Button>
       </div>
-    </Surface>
+    </Card>
   );
 }
 
@@ -593,7 +610,10 @@ export function TodayPage() {
   const connected = status === 'connected';
   const today = useLocalDate();
   const tasks = useTasks();
+  const contracts = useDocuments();
   const dueCount = dueTasks(tasks, today).length;
+  const cancelSoon =
+    overviewFacts({ now, events: null, mails: null, contracts }).focus.kind === 'cancel';
   const hasData =
     events !== null || mails !== null || calendarError !== null || gmailError !== null;
 
@@ -665,8 +685,8 @@ export function TodayPage() {
 
         {!demo && !connected && hasData && sessionError === 'EXPIRED' && <ExpiredBanner />}
         {!showData && <ConnectCard error={sessionError} />}
-        {(events !== null || mails !== null || dueCount > 0) && (
-          <OverviewCard now={now} tasks={tasks} />
+        {(events !== null || mails !== null || dueCount > 0 || cancelSoon) && (
+          <OverviewCard now={now} tasks={tasks} contracts={contracts} />
         )}
         <div className="grid items-start gap-6 wide:grid-cols-2">
           <div className="flex min-w-0 flex-col gap-6">
@@ -675,12 +695,7 @@ export function TodayPage() {
           </div>
           <div className="flex min-w-0 flex-col gap-6">
             {showData && <MailsCard now={now} />}
-            <LaterCard
-              icon={FileText}
-              title={t.later.documents}
-              text={t.later.documentsText}
-              step={6}
-            />
+            <DeadlinesCard contracts={contracts} today={today} />
           </div>
         </div>
       </div>

@@ -6,13 +6,23 @@ import { settingsRepo } from '../repositories';
 import { resetDb } from './testDb';
 
 describe('database schema', () => {
-  it('opens version 2 under its own name with all tables', async () => {
+  it('opens version 3 under its own name with all tables', async () => {
     expect(await openDatabase()).toEqual({ ok: true });
     expect(db.name).toBe(DB_NAME);
     expect(DB_NAME).toBe('cockpit');
-    expect(db.verno).toBe(2);
+    expect(db.verno).toBe(3);
     expect(db.tables.map((table) => table.name).sort()).toEqual(
-      ['brand', 'documents', 'library', 'meta', 'reviews', 'secrets', 'settings', 'tasks'].sort(),
+      [
+        'brand',
+        'documents',
+        'files',
+        'library',
+        'meta',
+        'reviews',
+        'secrets',
+        'settings',
+        'tasks',
+      ].sort(),
     );
     expect(db.settings.schema.primKey.name).toBe('key');
   });
@@ -23,6 +33,8 @@ describe('database schema', () => {
       expect(db.table(table).schema.indexes.map((index) => index.name)).toEqual(['updatedAt']);
     }
     expect(db.secrets.schema.indexes).toEqual([]);
+    // Files: readable are only the id, the contract id and the timestamp.
+    expect(db.files.schema.indexes.map((index) => index.name)).toEqual(['documentId', 'updatedAt']);
   });
 
   it('upgrades a step-1 database (settings only) and keeps its settings', async () => {
@@ -34,9 +46,25 @@ describe('database schema', () => {
     v1.close();
     const upgraded = new CockpitDb(name);
     expect(await openDatabase(upgraded)).toEqual({ ok: true });
-    expect(upgraded.verno).toBe(2);
+    expect(upgraded.verno).toBe(3);
     expect(await upgraded.settings.get('theme')).toEqual({ key: 'theme', value: 'dark' });
     expect(await upgraded.tasks.count()).toBe(0);
+    upgraded.close();
+    await Dexie.delete(name);
+  });
+
+  it('upgrades a step-2 database and adds the files table', async () => {
+    const name = 'cockpit-upgrade-v2-test';
+    const v2 = new Dexie(name);
+    v2.version(2).stores({ settings: 'key', tasks: 'id, updatedAt', documents: 'id, updatedAt' });
+    await v2.open();
+    await v2.table('tasks').put({ id: 't1', updatedAt: '2026-10-01T00:00:00.000Z', payload: 1 });
+    v2.close();
+    const upgraded = new CockpitDb(name);
+    expect(await openDatabase(upgraded)).toEqual({ ok: true });
+    expect(upgraded.verno).toBe(3);
+    expect(await upgraded.tasks.count()).toBe(1);
+    expect(await upgraded.files.count()).toBe(0);
     upgraded.close();
     await Dexie.delete(name);
   });

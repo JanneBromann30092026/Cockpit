@@ -3,12 +3,14 @@
  * undo, and the invented demo tasks of the developer mode.
  */
 import { nextTimestamp } from '@/core/time';
-import { DATA_TABLES, type DataTable } from '../db';
+import { DATA_TABLES, db, type DataTable } from '../db';
 import type { Task } from '../schemas';
 import { useDataStore } from '../store';
 import { requireRecord, validateRecord } from './recordsRepo';
 import { commit } from './rows';
-import { tasksRepo } from './records';
+import { demoDocumentPdf, type DemoDocument } from '../demo/documents';
+import { documentActions } from './documentActions';
+import { documentsRepo, tasksRepo } from './records';
 
 export type TaskInput = Parameters<typeof tasksRepo.create>[0];
 export type TaskPatch = Partial<Pick<Task, 'title' | 'dueDate' | 'priority' | 'notes'>>;
@@ -63,6 +65,21 @@ export const demoActions = {
     return inputs.length;
   },
 
+  async createDocuments(demos: readonly DemoDocument[]): Promise<number> {
+    for (const demo of demos) {
+      const record = await documentsRepo.create({ ...demo.input, demo: true });
+      const pdf = demoDocumentPdf(demo);
+      if (pdf && demo.pdf) {
+        await documentActions.addFile(record.id, {
+          name: demo.pdf.name,
+          type: 'application/pdf',
+          data: pdf,
+        });
+      }
+    }
+    return demos.length;
+  },
+
   count(): number {
     return DATA_TABLES.reduce(
       (sum, table) => sum + records(table).filter((record) => record.demo).length,
@@ -79,6 +96,9 @@ export const demoActions = {
         .map((record) => record.id),
     })).filter((entry) => entry.ids.length > 0);
     await commit([], deletes);
+    // Originals of demo contracts go with them (unreadable without the contract anyway).
+    const documentIds = deletes.find((entry) => entry.table === 'documents')?.ids ?? [];
+    if (documentIds.length > 0) await db.files.where('documentId').anyOf(documentIds).delete();
     return deletes.reduce((sum, entry) => sum + entry.ids.length, 0);
   },
 };

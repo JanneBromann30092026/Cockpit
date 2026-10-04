@@ -1,6 +1,7 @@
 /**
  * Prompt template of the optional AI day overview (data, not UI text). Only what the
- * overview needs is sent: today's events, due tasks (title, priority, overdue),
+ * overview needs is sent: today's events, due tasks (title, priority, overdue), upcoming
+ * contract dates (name, kind, date – no amounts),
  * sender/subject/snippet of mails from people, subjects of updates and the number of
  * newsletters.
  */
@@ -10,6 +11,7 @@ Schreibe genau drei kurze Sätze auf Deutsch in der Du-Form:
 1. Was heute das Wichtigste ist.
 2. Wo es zeitlich eng wird (oder dass genug Luft ist).
 3. Was im Postfach und auf der Aufgabenliste wartet.
+Vertragsfristen sind nur Hinweise aus der App: nenne sie mit dem Zusatz „im Original prüfen“ und gib keine Rechtsberatung.
 Verwende nur die Angaben aus der Nachricht. Erfinde keine Termine, Namen, Fristen oder Inhalte.
 Wenn eine Angabe fehlt, lass sie weg. Keine Aufzählungszeichen, keine Überschriften, kein Markdown.`;
 
@@ -34,6 +36,14 @@ export interface DaySummaryTask {
   overdueDays: number;
 }
 
+export interface DaySummaryDeadline {
+  /** Contract name. */
+  name: string;
+  kind: 'kündigen bis' | 'Laufzeit endet' | 'Zahlung';
+  /** e.g. "Fr., 09.10." */
+  date: string;
+}
+
 export interface DaySummaryRequest {
   /** e.g. "Montag, 5. Oktober 2026, 09:12 Uhr". */
   now: string;
@@ -48,6 +58,8 @@ export interface DaySummaryRequest {
   } | null;
   /** Open tasks due today or earlier. */
   tasks: DaySummaryTask[];
+  /** Upcoming contract dates (no amounts). */
+  deadlines: DaySummaryDeadline[];
 }
 
 /** The user message: compact, structured and without anything the overview does not need. */
@@ -68,6 +80,11 @@ export function buildDaySummaryMessage(input: DaySummaryRequest): string {
         titel: task.title,
         prioritaet: task.priority,
         ...(task.overdueDays > 0 ? { ueberfaellig_seit_tagen: task.overdueDays } : {}),
+      })),
+      vertragsfristen: input.deadlines.map((deadline) => ({
+        vertrag: deadline.name,
+        art: deadline.kind,
+        datum: deadline.date,
       })),
     },
     null,
