@@ -199,7 +199,8 @@ export function DictationCard({
                       ),
                     )
                   }
-                  className="self-start"
+                  // Four choices must fit the narrow review column.
+                  className="w-full [&>button]:px-2"
                 />
               </li>
             ))}
