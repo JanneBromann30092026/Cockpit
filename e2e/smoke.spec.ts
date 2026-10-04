@@ -49,7 +49,7 @@ test('navigation switches pages', async ({ page }) => {
   const pages = [
     ['Aufgaben', 'Keine offenen Aufgaben'],
     ['Verträge', 'Noch keine Verträge'],
-    ['Reviews', 'Kommt in Schritt 7'],
+    ['Reviews', 'Noch keine Reviews'],
     ['Bibliothek', 'Kommt in Schritt 9'],
     ['Marke', 'Kommt in Schritt 10'],
     ['Einstellungen', 'Darstellung'],

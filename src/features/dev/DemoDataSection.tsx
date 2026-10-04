@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { FilePlus, ListPlus, Trash2 } from 'lucide-react';
+import { FilePlus, ListPlus, NotebookPen, Trash2 } from 'lucide-react';
 import { Badge, Button, Surface, toast } from '@/components/ui';
 import { useLocalDate } from '@/app/hooks/useLocalDate';
 import { demoDocuments } from '@/data/demo/documents';
+import { demoReviews } from '@/data/demo/reviews';
 import { demoTaskInputs } from '@/data/demo/tasks';
 import { demoActions } from '@/data/repositories';
 import { useDataStore } from '@/data/store';
@@ -17,6 +18,7 @@ export function DemoDataSection() {
   // Re-render on every data change; the count itself comes from the repository.
   useDataStore((state) => state.tasks);
   useDataStore((state) => state.documents);
+  useDataStore((state) => state.reviews);
   const count = demoActions.count();
 
   const run = async (action: () => Promise<string>) => {
@@ -60,6 +62,19 @@ export function DemoDataSection() {
             data-testid="dev-demo-documents"
           >
             {t.createDocuments}
+          </Button>
+          <Button
+            variant="secondary"
+            icon={NotebookPen}
+            loading={busy}
+            onClick={() =>
+              void run(async () =>
+                t.createdReviews(await demoActions.createReviews(demoReviews(today))),
+              )
+            }
+            data-testid="dev-demo-reviews"
+          >
+            {t.createReviews}
           </Button>
           <Button
             variant="secondary"
