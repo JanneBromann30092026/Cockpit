@@ -415,6 +415,34 @@ async function documentCalendar(page: Page) {
   await page.getByTestId('calendar-preview').waitFor();
 }
 
+/** Speech recognition answering with an invented review (no microphone in the cloud). */
+function fakeSpeechScript() {
+  const text =
+    'Heute lief die Präsentation im Seminar richtig gut. Am Nachmittag war ich vom Handy abgelenkt. Morgen will ich mit der Steuererklärung anfangen. Abends noch mit Mia telefoniert.';
+  class FakeRecognition {
+    lang = 'de-DE';
+    continuous = true;
+    interimResults = true;
+    onresult: ((event: unknown) => void) | null = null;
+    onerror: ((event: unknown) => void) | null = null;
+    onend: (() => void) | null = null;
+    start() {
+      setTimeout(() => {
+        this.onresult?.({ results: [Object.assign([{ transcript: text }], { isFinal: true })] });
+      }, 100);
+    }
+    stop() {
+      setTimeout(() => this.onend?.(), 20);
+    }
+    abort() {
+      this.onend?.();
+    }
+  }
+  const scope = window as unknown as Record<string, unknown>;
+  scope.SpeechRecognition = FakeRecognition;
+  scope.webkitSpeechRecognition = FakeRecognition;
+}
+
 /** AI on with an (invented) key – a filtered run skips the settings shots. */
 async function ensureAi(page: Page) {
   await page.goto(`${PREVIEW_URL}#/settings`);
@@ -521,6 +549,22 @@ async function reviewDayAi(page: Page) {
     .evaluate((element) => element.scrollIntoView({ block: 'center' }));
 }
 
+async function reviewDictation(page: Page) {
+  await ensureDemoReviews(page);
+  await page.goto(`${PREVIEW_URL}#/reviews/day/today`);
+  const card = page.getByTestId('dictation-card');
+  await card.getByTestId('dictation-record').click();
+  await page.waitForFunction(() =>
+    document
+      .querySelector<HTMLTextAreaElement>('[data-testid="dictation-text"]')
+      ?.value.includes('Mia'),
+  );
+  await card.getByTestId('dictation-stop').click();
+  await card.getByTestId('dictation-sort').click();
+  await card.getByTestId('dictation-row').first().waitFor();
+  await card.evaluate((element) => element.scrollIntoView({ block: 'start' }));
+}
+
 async function reviewWeek(page: Page) {
   await ensureDemoReviews(page);
   await page.goto(`${PREVIEW_URL}#/reviews/week/current`);
@@ -608,6 +652,7 @@ const SHOTS: Shot[] = [
   { route: '/reviews', name: 'reviews-demo', prepare: reviewsDemo, scroll: true },
   { route: '/reviews', name: 'reviews-day', prepare: reviewDay, scroll: true },
   { route: '/reviews', name: 'reviews-day-ai', prepare: reviewDayAi },
+  { route: '/reviews', name: 'reviews-dictation', prepare: reviewDictation },
   { route: '/reviews', name: 'reviews-week', prepare: reviewWeek, scroll: true },
   { route: '/reviews', name: 'reviews-week-done', prepare: reviewWeekDone },
   { route: '/dev/ui', name: 'dev-modal', prepare: click('Modal öffnen') },
@@ -743,6 +788,7 @@ try {
       serviceWorkers: 'block',
     });
     await context.addInitScript(simulatedKeyboardScript);
+    await context.addInitScript(fakeSpeechScript);
     const page = await context.newPage();
     await mockAnthropic(page);
     await mockGoogle(page);

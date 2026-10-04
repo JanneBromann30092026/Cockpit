@@ -26,6 +26,7 @@ import { Page } from '@/app/shell/Page';
 import { withAiMark } from '@/core/aiMark';
 import { addDays } from '@/core/dates';
 import { formatLongDate } from '@/core/format';
+import type { SortedSentence } from '@/core/reviews/dictation';
 import { dayFacts, reviewStreak } from '@/core/reviews/reviews';
 import { isoDate, LIMITS, type Review } from '@/data/schemas';
 import { reviewActions } from '@/data/repositories';
@@ -45,6 +46,7 @@ import {
 } from './ReviewParts';
 import { dayReviewRequest } from './reviewAi';
 import { useDayEvents, type DayEventsState } from './reviewEvents';
+import { DictationCard } from './DictationCard';
 import { addPoint, daySuggestions, eventTime } from './reviewText';
 import { useAutosave, useReviews } from './useReviews';
 
@@ -162,6 +164,18 @@ function DayEditor({ date, initial }: { date: string; initial?: Review }) {
     setProposal({ status: 'idle' });
   };
 
+  /** Spoken sentences go into their sections; unclear ones into the note. */
+  const applyDictation = (sentences: SortedSentence[]) => {
+    const of = (section: SortedSentence['section']) =>
+      sentences.filter((entry) => entry.section === section).map((entry) => entry.text);
+    change(setWentWell)(of('wentWell').reduce(addPoint, wentWell));
+    change(setNotWell)(of('notWell').reduce(addPoint, notWell));
+    change(setImprove)(of('improve').reduce(addPoint, improve));
+    const extra = of('note');
+    if (extra.length > 0) change(setNote)([note.trim(), ...extra].filter(Boolean).join('\n'));
+    toast.success(t.dictation.applied(sentences.length));
+  };
+
   const finish = async () => {
     setSaving(true);
     try {
@@ -264,6 +278,7 @@ function DayEditor({ date, initial }: { date: string; initial?: Review }) {
                 testId="review-day-open"
               />
             </Surface>
+            <DictationCard variant="day" onApply={applyDictation} />
             <Surface className="flex flex-col gap-3">
               <Textarea
                 label={t.note}
