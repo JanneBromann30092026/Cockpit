@@ -32,6 +32,19 @@ export type PaymentInterval = (typeof PAYMENT_INTERVALS)[number];
 export const NOTICE_UNITS = ['days', 'weeks', 'months'] as const;
 export type NoticeUnit = (typeof NOTICE_UNITS)[number];
 
+/** Contract fields Claude can read from an original (marked "Claude" until edited). */
+export const DOCUMENT_AI_FIELDS = [
+  'name',
+  'category',
+  'provider',
+  'amount',
+  'interval',
+  'dueDate',
+  'termEnd',
+  'noticePeriod',
+] as const;
+export type DocumentAiField = (typeof DOCUMENT_AI_FIELDS)[number];
+
 export const REVIEW_KINDS = ['daily', 'weekly'] as const;
 export type ReviewKind = (typeof REVIEW_KINDS)[number];
 

@@ -3,6 +3,7 @@ import { ShieldAlert } from 'lucide-react';
 import { Button, Input, Select, Textarea, toast, type SelectOption } from '@/components/ui';
 import { EditPanel } from '@/app/shell/EditPanel';
 import { cancelBy, parseNotice } from '@/core/documents/contracts';
+import { remainingAiFields } from '@/core/documents/extract';
 import { amountInput, formatDate, parseAmount } from '@/core/format';
 import {
   DOCUMENT_CATEGORIES,
@@ -110,7 +111,11 @@ export function DocumentEditor({
     };
     try {
       const record = document
-        ? await documentActions.edit(document.id, fields)
+        ? await documentActions.edit(document.id, {
+            ...fields,
+            // Values changed by hand are no longer Claude's.
+            aiFields: remainingAiFields(document, fields),
+          })
         : await documentActions.create(fields);
       toast.success(document ? t.toastSaved : t.toastAdded(record.name));
       onSaved?.(record);

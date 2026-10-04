@@ -6,6 +6,7 @@
  */
 import { z } from 'zod';
 import {
+  DOCUMENT_AI_FIELDS,
   DOCUMENT_CATEGORIES,
   LIBRARY_TYPES,
   NOTICE_UNITS,
@@ -135,6 +136,11 @@ export const documentFields = {
   openPoints: textList(LIMITS.item, LIMITS.items).default([]),
   notes: optionalText(LIMITS.notes),
   files: z.array(fileMetaSchema).max(LIMITS.files).default([]),
+  /** Fields Claude read from an original and nobody changed since ("im Original prüfen"). */
+  aiFields: z
+    .array(z.enum(DOCUMENT_AI_FIELDS))
+    .default([])
+    .transform((values) => [...new Set(values)]),
 };
 export const documentSchema = z.object({ ...base, ...documentFields });
 export type DocumentRecord = z.output<typeof documentSchema>;

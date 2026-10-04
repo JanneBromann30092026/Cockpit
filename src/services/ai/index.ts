@@ -1,12 +1,16 @@
 import { secretsRepo } from '@/data/repositories';
 import { VaultLockedError } from '@/services/crypto/session';
 import { API_KEY_SECRET } from './config';
+import type { ContractQuestionRequest } from '@/data/prompts/contractQuestion';
 import type { DaySummaryRequest } from '@/data/prompts/daySummary';
 import {
   AiError,
   type AiCallOptions,
   type AiProvider,
   type ConnectionTestResult,
+  type ContractAnswerResult,
+  type ContractExtractRequest,
+  type ContractExtractResult,
   type DaySummaryResult,
 } from './types';
 
@@ -67,6 +71,26 @@ export async function summarizeDayWithAi(
 ): Promise<DaySummaryResult> {
   const provider = await getAiProvider(config);
   return provider.summarizeDay(input, options);
+}
+
+/** A question about my contracts (sends their structured fields – only on tap). */
+export async function askContractsWithAi(
+  config: AiConfig,
+  input: ContractQuestionRequest,
+  options?: AiCallOptions,
+): Promise<ContractAnswerResult> {
+  const provider = await getAiProvider(config);
+  return provider.askContracts(input, options);
+}
+
+/** Reads a contract from one original (sends that file – only on tap, after the warning). */
+export async function extractContractWithAi(
+  config: AiConfig,
+  input: ContractExtractRequest,
+  options?: AiCallOptions,
+): Promise<ContractExtractResult> {
+  const provider = await getAiProvider(config);
+  return provider.extractContract(input, options);
 }
 
 /** Checks key, network and model (no tokens are generated, so it costs nothing). */

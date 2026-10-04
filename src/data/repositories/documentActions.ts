@@ -4,6 +4,11 @@
  * written in one transaction, so neither exists without the other.
  */
 import { recordAad } from '@/core/crypto/format';
+import {
+  extractionPatch,
+  type ContractExtraction,
+  type ExtractChoice,
+} from '@/core/documents/extract';
 import { nextTimestamp } from '@/core/time';
 import { requireSessionKey } from '@/services/crypto/session';
 import {
@@ -15,6 +20,7 @@ import {
   newFileKeyBytes,
 } from '@/services/crypto/webCrypto';
 import { db } from '../db';
+import type { DocumentCategory } from '../domain';
 import { RecordNotFoundError } from '../errors';
 import { LIMITS, type DocumentRecord, type FileMeta } from '../schemas';
 import { dataStore } from '../store';
@@ -43,6 +49,12 @@ export interface NewFile {
   name: string;
   type: string;
   data: Uint8Array<ArrayBuffer>;
+}
+
+/** Throws when a file cannot be attached (size, type). */
+export function checkFile(file: { type: string; size: number }): void {
+  if (file.size > MAX_FILE_BYTES) throw new FileRejectedError('tooLarge');
+  if (!FILE_TYPES.test(file.type)) throw new FileRejectedError('type');
 }
 
 /** Writes the contract (and optionally one file row) in one transaction. */
@@ -87,11 +99,39 @@ export const documentActions = {
     dataStore.remove('documents', [id]);
   },
 
+  /**
+   * A new contract from its original: named after the file, the original attached.
+   * Nothing is kept when the file cannot be attached.
+   */
+  async createFromFile(
+    name: string,
+    file: NewFile,
+  ): Promise<{ document: DocumentRecord; file: FileMeta }> {
+    checkFile({ type: file.type, size: file.data.byteLength });
+    const created = await documentsRepo.create({ name });
+    try {
+      const meta = await documentActions.addFile(created.id, file);
+      return { document: requireRecord('documents', created.id), file: meta };
+    } catch (error: unknown) {
+      await documentActions.remove(created.id);
+      throw error;
+    }
+  },
+
+  /** Takes over the fields Claude read that the user chose. */
+  applyExtraction(
+    id: string,
+    extraction: ContractExtraction<DocumentCategory>,
+    choice: ExtractChoice,
+  ): Promise<DocumentRecord> {
+    const current = requireRecord('documents', id);
+    return documentsRepo.update(id, extractionPatch(current, extraction, choice));
+  },
+
   /** Encrypts and attaches an original (PDF or photo). */
   async addFile(documentId: string, file: NewFile, now: Date = new Date()): Promise<FileMeta> {
     const current = requireRecord('documents', documentId);
-    if (file.data.byteLength > MAX_FILE_BYTES) throw new FileRejectedError('tooLarge');
-    if (!FILE_TYPES.test(file.type)) throw new FileRejectedError('type');
+    checkFile({ type: file.type, size: file.data.byteLength });
     if (current.files.length >= LIMITS.files) throw new FileRejectedError('tooMany');
     const id = crypto.randomUUID();
     const raw = newFileKeyBytes();

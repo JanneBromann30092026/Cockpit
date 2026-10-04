@@ -176,30 +176,68 @@ async function mockAnthropic(page: Page) {
     display_name: 'Claude Haiku 4.5',
     created_at: '2025-10-01T00:00:00Z',
   };
-  const message = {
+  const summary =
+    'Am wichtigsten sind heute Lenas Folien fürs Kundenportal – sie braucht sie bis 13 Uhr. Eng wird es nach dem Projektmeeting, bis zum Videodreh bleiben nur zehn Minuten. Im Postfach warten zwei Mails mit Frist, der Rest kann bis heute Abend liegen bleiben.';
+  const year = new Date().getFullYear();
+  const extraction = {
+    name: 'Kfz-Versicherung',
+    category: 'insurance',
+    provider: 'Autoversicherung Beispiel AG',
+    amount_eur: 312.6,
+    interval: 'yearly',
+    due_date: `${year + 1}-01-01`,
+    term_end: `${year}-12-31`,
+    notice_period: '1 Monat zum Ablauf des Versicherungsjahres',
+    summary: [
+      'Haftpflicht und Teilkasko',
+      'Selbstbeteiligung Teilkasko 150 €',
+      'Verlängert sich jeweils um ein Jahr',
+    ],
+    open_points: ['Ist ein Schutzbrief enthalten?'],
+  };
+  /** The answer by request kind: contract reading, contract question or day overview. */
+  const answer = (body: { system?: unknown; messages?: { content?: unknown }[] }) => {
+    const system = typeof body.system === 'string' ? body.system : '';
+    if (system.startsWith('Du liest einen Vertrag')) return JSON.stringify(extraction);
+    if (system.startsWith('Du beantwortest Fragen')) {
+      const content = body.messages?.[0]?.content;
+      const contracts = (
+        JSON.parse(typeof content === 'string' ? content : '{}') as {
+          vertraege?: { ref: string; name: string }[];
+        }
+      ).vertraege;
+      const ref = contracts?.find((contract) => contract.name === 'Hausratversicherung')?.ref;
+      return JSON.stringify({
+        antwort:
+          'Die Hausratversicherung kostet 89,40 € im Jahr, also etwa 7,45 € im Monat. Kündigen kannst du sie zum Ablauf des Versicherungsjahres mit drei Monaten Frist – die Daten bitte im Original prüfen.',
+        quellen: ref ? [ref] : [],
+      });
+    }
+    return summary;
+  };
+  const message = (text: string) => ({
     id: 'msg_screenshot',
     type: 'message',
     role: 'assistant',
     model: 'claude-haiku-4-5-20251001',
-    content: [
-      {
-        type: 'text',
-        text: 'Am wichtigsten sind heute Lenas Folien fürs Kundenportal – sie braucht sie bis 13 Uhr. Eng wird es nach dem Projektmeeting, bis zum Videodreh bleiben nur zehn Minuten. Im Postfach warten zwei Mails mit Frist, der Rest kann bis heute Abend liegen bleiben.',
-      },
-    ],
+    content: [{ type: 'text', text }],
     stop_reason: 'end_turn',
     stop_sequence: null,
     usage: { input_tokens: 600, output_tokens: 70 },
-  };
-  await page.route('https://api.anthropic.com/**', (route) =>
-    route.request().method() === 'OPTIONS'
-      ? route.fulfill({ status: 204, headers: cors })
-      : route.fulfill({
-          status: 200,
-          headers: { ...cors, 'content-type': 'application/json' },
-          body: JSON.stringify(route.request().method() === 'POST' ? message : model),
-        }),
-  );
+  });
+  await page.route('https://api.anthropic.com/**', (route) => {
+    const request = route.request();
+    if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+    const body =
+      request.method() === 'POST'
+        ? message(answer(JSON.parse(request.postData() ?? '{}') as Parameters<typeof answer>[0]))
+        : model;
+    return route.fulfill({
+      status: 200,
+      headers: { ...cors, 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  });
 }
 
 async function settingsAi(page: Page) {
@@ -357,6 +395,70 @@ async function documentCalendar(page: Page) {
   await page.getByTestId('calendar-preview').waitFor();
 }
 
+/** AI on with an (invented) key – a filtered run skips the settings shots. */
+async function ensureAi(page: Page) {
+  await page.goto(`${PREVIEW_URL}#/settings`);
+  const ai = page.getByTestId('settings-ai');
+  const toggle = ai.getByRole('switch', { name: 'KI verwenden' });
+  if ((await toggle.getAttribute('aria-checked')) !== 'true') await toggle.click();
+  const status = ai.getByTestId('api-key-status');
+  await status.waitFor();
+  if ((await status.textContent()) !== 'Key hinterlegt') {
+    await ai.getByTestId('api-key-input').fill('sk-ant-api03-screenshot-0123456789abcdefghijk');
+    await ai.getByRole('button', { name: 'Key speichern' }).click();
+    await status.filter({ hasText: 'Key hinterlegt' }).waitFor();
+  }
+}
+
+async function scrollToAsk(page: Page) {
+  await page
+    .getByTestId('documents-ask')
+    .evaluate((element) => element.scrollIntoView({ block: 'start' }));
+}
+
+async function documentAsk(page: Page) {
+  await demoDocuments(page);
+  await page.getByRole('button', { name: 'Wann kann ich spätestens kündigen?' }).click();
+  await page.getByTestId('ask-line').first().waitFor();
+  await scrollToAsk(page);
+}
+
+async function documentAskClaude(page: Page) {
+  await ensureAi(page);
+  await page.goto(`${PREVIEW_URL}#/documents`);
+  await demoDocuments(page);
+  await page.getByTestId('ask-input').fill('Was kostet mich die Hausratversicherung?');
+  await page.getByTestId('ask-submit').click();
+  await page.getByTestId('ask-claude').click();
+  await page.getByTestId('ask-claude-answer').waitFor();
+  await scrollToAsk(page);
+}
+
+/** A new contract from its original (AI on): the warning opens first. */
+async function documentFromOriginal(page: Page) {
+  await ensureAi(page);
+  await page.goto(`${PREVIEW_URL}#/documents`);
+  await page.getByTestId('documents-file-input').setInputFiles({
+    name: 'Kfz-Versicherung_Police.pdf',
+    mimeType: 'application/pdf',
+    buffer: Buffer.from('%PDF-1.4\n% Erfundenes Beispiel\n%%EOF\n'),
+  });
+  await page.getByTestId('extract-warning').waitFor();
+}
+
+async function documentExtractReview(page: Page) {
+  await documentFromOriginal(page);
+  await page.getByTestId('extract-send').click();
+  await page.getByTestId('extract-fields').waitFor();
+}
+
+async function documentExtracted(page: Page) {
+  await documentExtractReview(page);
+  await page.getByTestId('extract-apply').click();
+  await page.getByTestId('ai-mark-hint').waitFor();
+  await page.waitForTimeout(3200); // let the toast disappear
+}
+
 async function taskMenu(page: Page) {
   await page.getByTestId('task-menu').first().click();
 }
@@ -418,6 +520,11 @@ const SHOTS: Shot[] = [
   { route: '/documents', name: 'documents-detail', prepare: documentDetail, scroll: true },
   { route: '/documents', name: 'documents-editor', prepare: documentEditor },
   { route: '/documents', name: 'documents-calendar', prepare: documentCalendar },
+  { route: '/documents', name: 'documents-ask', prepare: documentAsk },
+  { route: '/documents', name: 'documents-ask-claude', prepare: documentAskClaude },
+  { route: '/documents', name: 'documents-extract', prepare: documentFromOriginal },
+  { route: '/documents', name: 'documents-extract-review', prepare: documentExtractReview },
+  { route: '/documents', name: 'documents-extracted', prepare: documentExtracted, scroll: true },
   { route: '/dev/ui', name: 'dev-modal', prepare: click('Modal öffnen') },
   { route: '/dev/ui', name: 'dev-sheet', prepare: click('Bottom Sheet öffnen') },
   { route: '/dev/ui', name: 'dev-side-panel', prepare: click('Seitenpanel öffnen') },

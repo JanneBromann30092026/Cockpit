@@ -1,3 +1,6 @@
+import type { ContractExtraction } from '@/core/documents/extract';
+import type { DocumentCategory } from '@/data/domain';
+import type { ContractAnswer, ContractQuestionRequest } from '@/data/prompts/contractQuestion';
 import type { DaySummaryRequest } from '@/data/prompts/daySummary';
 
 export interface ConnectionTestResult {
@@ -9,6 +12,26 @@ export interface ConnectionTestResult {
 export interface DaySummaryResult {
   /** At most three sentences, written by Claude. */
   sentences: string[];
+  model: string;
+}
+
+export interface ContractAnswerResult extends ContractAnswer {
+  model: string;
+}
+
+/** An original to read: a PDF or a photo already converted to JPEG/PNG (base64). */
+export type ContractSource =
+  | { kind: 'pdf'; data: string }
+  | { kind: 'image'; mediaType: 'image/jpeg' | 'image/png'; data: string };
+
+export interface ContractExtractRequest {
+  /** "JJJJ-MM-TT". */
+  today: string;
+  source: ContractSource;
+}
+
+export interface ContractExtractResult {
+  extraction: ContractExtraction<DocumentCategory>;
   model: string;
 }
 
@@ -28,6 +51,16 @@ export interface AiProvider {
   testConnection(options?: AiCallOptions): Promise<ConnectionTestResult>;
   /** The day in three sentences from the given events and mails (only on explicit tap). */
   summarizeDay(input: DaySummaryRequest, options?: AiCallOptions): Promise<DaySummaryResult>;
+  /** Answers a question from the structured fields of my contracts (only on explicit tap). */
+  askContracts(
+    input: ContractQuestionRequest,
+    options?: AiCallOptions,
+  ): Promise<ContractAnswerResult>;
+  /** Reads contract fields from one original (only on explicit tap, after the warning). */
+  extractContract(
+    input: ContractExtractRequest,
+    options?: AiCallOptions,
+  ): Promise<ContractExtractResult>;
 }
 
 export const AI_ERROR_CODES = [
@@ -42,6 +75,7 @@ export const AI_ERROR_CODES = [
   'OVERLOADED',
   'AUTH',
   'MODEL_NOT_FOUND',
+  'TOO_LARGE',
   'REFUSED',
   'INVALID_RESPONSE',
   'API_ERROR',
