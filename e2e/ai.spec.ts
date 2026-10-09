@@ -200,6 +200,8 @@ test('the model can be chosen or entered and survives a reload', async ({ page }
   await expect(aiSection(page).getByText('Ungültige Modell-ID')).toBeVisible();
   await custom.fill('claude-haiku-4-5');
   await custom.press('Enter');
+  // Saving is asynchronous: reload only after it finished.
+  await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toBeVisible();
   await reloadAndUnlock(page);
   await expect(aiSection(page).getByTestId('ai-model')).toHaveValue('custom');
   await expect(aiSection(page).getByTestId('ai-custom-model')).toHaveValue('claude-haiku-4-5');

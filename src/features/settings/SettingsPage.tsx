@@ -9,6 +9,7 @@ import { de } from '@/i18n/de';
 import { vault } from '@/services/vault';
 import { AiSettings } from './AiSettings';
 import { GoogleSettings } from './GoogleSettings';
+import { PushSettings } from './PushSettings';
 import { SecuritySettings } from './SecuritySettings';
 import { THEME_PREFERENCES, useSettings } from './settingsStore';
 import { AboutInfo, StorageInfo } from './SystemStatus';
@@ -103,6 +104,10 @@ export function SettingsPage() {
 
         <Section title={de.google.title} testId="settings-google">
           <GoogleSettings />
+        </Section>
+
+        <Section title={t.notifications.title} testId="settings-push">
+          <PushSettings />
         </Section>
 
         <Section title={t.ai.title} testId="settings-ai">

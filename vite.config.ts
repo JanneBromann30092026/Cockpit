@@ -128,14 +128,15 @@ export default defineConfig({
           },
         ],
       },
-      workbox: {
-        // Own cache names: Kompass and Synapse run on the same origin (GitHub Pages).
-        cacheId: 'cockpit',
+      // Step 8: own service worker (src/sw.ts) for push notifications; it keeps the
+      // precache of generateSW (same cache names, navigation fallback, update prompt).
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
         // iOS loads the startup images itself when the app is added to the home screen.
         globIgnores: ['splash/**'],
-        navigateFallback: `${BASE}index.html`,
-        cleanupOutdatedCaches: true,
       },
     }),
   ],
@@ -173,7 +174,7 @@ export default defineConfig({
     strictPort: true,
   },
   test: {
-    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'scripts/**/*.test.ts'],
     environment: 'node',
     // In-memory IndexedDB for repository tests.
     setupFiles: ['fake-indexeddb/auto'],
