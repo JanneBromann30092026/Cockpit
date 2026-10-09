@@ -25,6 +25,18 @@ import {
   type WeekReviewRequest,
 } from '@/data/prompts/reviews';
 import {
+  BRAND_PROFILE_SCHEMA,
+  BRAND_PROFILE_SYSTEM_PROMPT,
+  BRAND_WRITE_SCHEMA,
+  BRAND_WRITE_SYSTEM_PROMPT,
+  buildBrandProfileMessage,
+  buildBrandWriteMessage,
+  parseBrandProfile,
+  parseBrandWrite,
+  type BrandProfileRequest,
+  type BrandWriteRequest,
+} from '@/data/prompts/brand';
+import {
   buildLibraryKeyPointsMessage,
   buildLibraryListMessage,
   buildLibraryQuestionMessage,
@@ -52,6 +64,8 @@ import {
   AiError,
   type AiCallOptions,
   type AiProvider,
+  type BrandProfileResult,
+  type BrandWriteResult,
   type ConnectionTestResult,
   type ContractAnswerResult,
   type ContractExtractRequest,
@@ -424,6 +438,46 @@ export class AnthropicProvider implements AiProvider {
     const points = parseLibraryKeyPoints(json);
     if (!points) throw new AiError('INVALID_RESPONSE');
     return { points, model };
+  }
+
+  /** Brand profile and design from the interview answers (nothing else is sent). */
+  async brandProfile(
+    input: BrandProfileRequest,
+    options: AiCallOptions = {},
+  ): Promise<BrandProfileResult> {
+    const { json, model } = await this.structured(
+      {
+        max_tokens: SUMMARY_MAX_TOKENS,
+        system: BRAND_PROFILE_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: buildBrandProfileMessage(input) }],
+        output_config: { format: { type: 'json_schema', schema: BRAND_PROFILE_SCHEMA } },
+      },
+      options,
+      SUMMARY_TIMEOUT_MS,
+    );
+    const profile = parseBrandProfile(json);
+    if (!profile) throw new AiError('INVALID_RESPONSE');
+    return { profile, model };
+  }
+
+  /** A newsletter, landing page, post or video script in the profile's voice. */
+  async brandWrite(
+    input: BrandWriteRequest,
+    options: AiCallOptions = {},
+  ): Promise<BrandWriteResult> {
+    const { json, model } = await this.structured(
+      {
+        max_tokens: EXTRACT_MAX_TOKENS,
+        system: BRAND_WRITE_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: buildBrandWriteMessage(input) }],
+        output_config: { format: { type: 'json_schema', schema: BRAND_WRITE_SCHEMA } },
+      },
+      options,
+      EXTRACT_TIMEOUT_MS,
+    );
+    const text = parseBrandWrite(json);
+    if (!text) throw new AiError('INVALID_RESPONSE');
+    return { text, model };
   }
 
   /** Looks up the configured model: validates key, network and model without generating tokens. */

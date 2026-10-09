@@ -164,14 +164,6 @@
   display: none;
 }
 
-/* Placeholder pages (src/features/coming-soon): soft accent and signal yellow light behind the motif. */
-.coming-soon-glow {
-  background:
-    radial-gradient(45% 45% at 40% 40%, var(--accent-glow), transparent 70%),
-    radial-gradient(35% 35% at 70% 70%, var(--signal-soft), transparent 70%);
-  opacity: 0.55;
-}
-
 /* Lock screen (src/app/lock): accent and signal yellow light behind the gauge. */
 .lock-glow {
   background:

@@ -8,6 +8,7 @@ import {
   type ContractQuestionRequest,
 } from '@/data/prompts/contractQuestion';
 import { CONTRACT_EXTRACT_SCHEMA } from '@/data/prompts/contractExtract';
+import { BRAND_PROFILE_SCHEMA, BRAND_WRITE_SYSTEM_PROMPT } from '@/data/prompts/brand';
 import {
   LIBRARY_ANSWER_SCHEMA,
   LIBRARY_KEY_POINTS_SYSTEM_PROMPT,
@@ -452,5 +453,59 @@ describe('AnthropicProvider library', () => {
     expect(result.points).toEqual(['Feste Blöcke helfen.']);
     expect(params(create).system).toBe(LIBRARY_KEY_POINTS_SYSTEM_PROMPT);
     expect(params(create).messages[0]?.content).toContain('Blöcke am Morgen');
+  });
+});
+
+describe('AnthropicProvider brand', () => {
+  const params = (create: ReturnType<typeof vi.fn>) =>
+    (create.mock.calls[0] as unknown as [Anthropic.MessageCreateParamsNonStreaming])[0];
+
+  it('profile: structured output from the answers', async () => {
+    const create = vi.fn(() =>
+      Promise.resolve(
+        answer(
+          JSON.stringify({
+            tonalitaet: 'Locker.',
+            werte: ['Mut'],
+            woerter_nutzen: [],
+            woerter_nie: [],
+            beispielsaetze: ['Los.'],
+            palette: null,
+            schrift_ueberschrift: 'futura',
+            schrift_text: 'inter',
+          }),
+        ),
+      ),
+    );
+    const result = await provider(notExpected, { create }).brandProfile({
+      answers: [{ frage: 'Wer?', antwort: 'Ich.' }],
+    });
+    expect(result.profile).toMatchObject({
+      tone: 'Locker.',
+      values: ['Mut'],
+      headingFont: 'futura',
+    });
+    expect(params(create).output_config).toEqual({
+      format: { type: 'json_schema', schema: BRAND_PROFILE_SCHEMA },
+    });
+  });
+
+  it('write: own prompt; refusal is reported', async () => {
+    const create = vi.fn(() => Promise.resolve(answer(JSON.stringify({ text: 'HOOK\nHey du' }))));
+    const result = await provider(notExpected, { create }).brandWrite({
+      kind: 'video',
+      topic: 'Lernen',
+      profile: { werte: [], woerter_nutzen: [], woerter_nie: [], beispielsaetze: [] },
+    });
+    expect(result.text).toBe('HOOK\nHey du');
+    expect(params(create).system).toBe(BRAND_WRITE_SYSTEM_PROMPT);
+    const refused = vi.fn(() => Promise.resolve(answer('', 'refusal')));
+    await expect(
+      provider(notExpected, { create: refused }).brandWrite({
+        kind: 'video',
+        topic: 'Lernen',
+        profile: { werte: [], woerter_nutzen: [], woerter_nie: [], beispielsaetze: [] },
+      }),
+    ).rejects.toMatchObject({ code: 'REFUSED' });
   });
 });

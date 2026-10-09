@@ -2,7 +2,8 @@ import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { Spinner } from '@/components/ui';
-import { ComingSoonPage } from '@/features/coming-soon/ComingSoonPage';
+import { BrandPage } from '@/features/brand/BrandPage';
+import { InterviewPage } from '@/features/brand/InterviewPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { DocumentDetailPage } from '@/features/documents/DocumentDetailPage';
 import { DocumentsPage } from '@/features/documents/DocumentsPage';
@@ -73,7 +74,8 @@ function AnimatedRoutes() {
             <Route path="/reviews/week/:date" element={<WeekReviewPage />} />
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/library/:id" element={<LibraryEntryPage />} />
-            <Route path="/brand" element={<ComingSoonPage page="brand" />} />
+            <Route path="/brand" element={<BrandPage />} />
+            <Route path="/brand/interview" element={<InterviewPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/dev/ui" element={<DevUiPage />} />
             <Route path="*" element={<Navigate to="/today" replace />} />

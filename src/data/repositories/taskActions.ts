@@ -10,8 +10,9 @@ import { requireRecord, validateRecord } from './recordsRepo';
 import { commit } from './rows';
 import { demoDocumentPdf, type DemoDocument } from '../demo/documents';
 import { documentActions } from './documentActions';
-import { documentsRepo, reviewsRepo, tasksRepo } from './records';
+import { brandRepo, documentsRepo, reviewsRepo, tasksRepo } from './records';
 import { libraryActions, type LibraryInput } from './libraryActions';
+import { brandActions, currentBrand } from './brandActions';
 import type { DemoReview } from '../demo/reviews';
 
 export type TaskInput = Parameters<typeof tasksRepo.create>[0];
@@ -98,6 +99,14 @@ export const demoActions = {
   async createLibrary(inputs: readonly LibraryInput[]): Promise<number> {
     await libraryActions.createMany(inputs.map((input) => ({ ...input, demo: true })));
     return inputs.length;
+  },
+
+  /** An invented brand profile (only when there is none yet). */
+  async createBrand(answers: Record<string, string>): Promise<number> {
+    if (currentBrand()) return 0;
+    await brandRepo.create({ answers, demo: true });
+    await brandActions.finishInterview();
+    return 1;
   },
 
   count(): number {

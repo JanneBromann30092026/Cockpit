@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { BookPlus, FilePlus, ListPlus, NotebookPen, Trash2 } from 'lucide-react';
+import { BookPlus, FilePlus, ListPlus, NotebookPen, Sparkles, Trash2 } from 'lucide-react';
 import { Badge, Button, Surface, toast } from '@/components/ui';
 import { useLocalDate } from '@/app/hooks/useLocalDate';
+import { DEMO_BRAND_ANSWERS } from '@/data/demo/brand';
 import { demoDocuments } from '@/data/demo/documents';
 import { demoLibraryInputs } from '@/data/demo/library';
 import { demoReviews } from '@/data/demo/reviews';
@@ -21,6 +22,7 @@ export function DemoDataSection() {
   useDataStore((state) => state.documents);
   useDataStore((state) => state.reviews);
   useDataStore((state) => state.library);
+  useDataStore((state) => state.brand);
   const count = demoActions.count();
 
   const run = async (action: () => Promise<string>) => {
@@ -90,6 +92,21 @@ export function DemoDataSection() {
             data-testid="dev-demo-library"
           >
             {t.createLibrary}
+          </Button>
+          <Button
+            variant="secondary"
+            icon={Sparkles}
+            loading={busy}
+            onClick={() =>
+              void run(async () =>
+                (await demoActions.createBrand(DEMO_BRAND_ANSWERS)) > 0
+                  ? t.createdBrand
+                  : t.brandExists,
+              )
+            }
+            data-testid="dev-demo-brand"
+          >
+            {t.createBrand}
           </Button>
           <Button
             variant="secondary"
