@@ -1,0 +1,77 @@
+name: Push-Mitteilungen
+
+# Sends Cockpit's reminders (src/core/push/schedule.ts – the crons below must match it).
+# GitHub schedules run in UTC: every reminder has a summer and a winter cron, the script
+# only sends the one that fits Berlin time. The content is always general; the
+# subscription and keys come from the secret PUSH_CONFIG (Cockpit → Einstellungen →
+# Mitteilungen). Manual run: Actions → Push-Mitteilungen → Run workflow.
+
+on:
+  schedule:
+    - cron: '53 4 * * *'
+    - cron: '53 5 * * *'
+    - cron: '23 19 * * *'
+    - cron: '23 20 * * *'
+    - cron: '53 16 * * 0'
+    - cron: '53 17 * * 0'
+  workflow_dispatch:
+    inputs:
+      reminder:
+        description: Mitteilung
+        type: choice
+        default: test
+        options:
+          - test
+          - morning
+          - dayReview
+          - weekReview
+
+permissions:
+  contents: read
+
+concurrency:
+  group: push
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Mitteilung senden
+        run: node --experimental-strip-types --no-warnings=ExperimentalWarning scripts/push/send.ts
+        env:
+          PUSH_CONFIG: ${{ secrets.PUSH_CONFIG }}
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          REMINDER: ${{ inputs.reminder }}
+
+  # GitHub disables schedules in public repositories after 60 days without activity. When
+  # the last commit is older than 45 days, a small commit keeps the reminders running
+  # (pushed with GITHUB_TOKEN, so it starts no other workflow).
+  keepalive:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - name: Aktivität sicherstellen
+        run: |
+          last=$(git log -1 --format=%ct)
+          age_days=$(( ($(date +%s) - last) / 86400 ))
+          echo "Letzter Commit vor ${age_days} Tagen."
+          if [ "$age_days" -lt 45 ]; then exit 0; fi
+          date -u +%Y-%m-%d > .github/keepalive
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/keepalive
+          git commit -m 'Push-Zeitplan aktiv halten'
+          git push

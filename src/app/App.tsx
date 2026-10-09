@@ -6,6 +6,7 @@ import { useSettings } from '@/features/settings/settingsStore';
 import { vault } from '@/services/vault';
 import { Background } from './Background';
 import { ErrorBoundary } from './ErrorBoundary';
+import { PushNavigation } from './PushNavigation';
 import { VaultGate } from './lock/VaultGate';
 import { applyReduceMotion, applyTheme, onSystemThemeChange } from './theme';
 import { UpdatePrompt } from './UpdatePrompt';
@@ -47,6 +48,7 @@ export function App() {
       <MotionConfig reducedMotion={reduceMotion ? 'always' : 'user'}>
         <HashRouter>
           <Background />
+          <PushNavigation />
           <VaultGate />
           <Toaster />
           <UpdatePrompt />

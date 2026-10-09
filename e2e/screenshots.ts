@@ -745,6 +745,56 @@ async function captureToday(variant: { name: string; options: BrowserContextOpti
   await context.close();
 }
 
+/** Fake push subscription (Chromium in the cloud has no push service). */
+function fakePushScript() {
+  let permission: NotificationPermission = 'default';
+  Object.defineProperty(Notification, 'permission', { get: () => permission });
+  Notification.requestPermission = () => {
+    permission = 'granted';
+    return Promise.resolve(permission);
+  };
+  const endpoint = 'https://web.push.apple.com/QScreenshot-subscription';
+  const subscription = {
+    endpoint,
+    toJSON: () => ({ endpoint, keys: { p256dh: `B${'A'.repeat(86)}`, auth: 'A'.repeat(22) } }),
+    unsubscribe: () => Promise.resolve(true),
+  };
+  let subscribed = false;
+  PushManager.prototype.subscribe = () => {
+    subscribed = true;
+    return Promise.resolve(subscription as unknown as PushSubscription);
+  };
+  PushManager.prototype.getSubscription = () =>
+    Promise.resolve(subscribed ? (subscription as unknown as PushSubscription) : null);
+}
+
+/**
+ * Settings → Mitteilungen before and after setting up. Own context: push needs the service
+ * worker, which the other shots block (offline toast).
+ */
+async function capturePush(variant: { name: string; options: BrowserContextOptions }) {
+  const context = await browser.newContext(variant.options);
+  await context.addInitScript(fakePushScript);
+  const page = await context.newPage();
+  await quickSetup(page);
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+  });
+  await page.goto(`${PREVIEW_URL}#/settings`);
+  const section = page.getByTestId('settings-push');
+  await section.evaluate((element) => element.scrollIntoView({ block: 'start' }));
+  await page.waitForTimeout(4500); // "offline ready" toast
+  await capture(page, `settings-push-off-${variant.name}`);
+  await section.getByTestId('push-setup').click();
+  await section.getByTestId('push-status').filter({ hasText: 'Eingerichtet' }).waitFor();
+  await page.waitForTimeout(3500); // toast
+  await section.evaluate((element) => element.scrollIntoView({ block: 'start' }));
+  await page.waitForTimeout(300);
+  await capture(page, `settings-push-${variant.name}`);
+  await captureScrolled(page, 'settings-push', variant.name);
+  await context.close();
+}
+
 /** Icon preview: home screen icon, maskable icon in a circle, tab icon and startup images. */
 async function captureIconPreview() {
   const context = await browser.newContext({ deviceScaleFactor: 2 });
@@ -834,6 +884,9 @@ try {
     if (!split && (!ONLY || ONLY.startsWith('lock'))) await captureUnlock(page, variant.name);
     await context.close();
     if (!ONLY || ONLY.startsWith('today')) await captureToday(variant);
+    if (!ONLY || 'settings-push'.startsWith(ONLY) || ONLY.startsWith('settings-push')) {
+      await capturePush(variant);
+    }
   }
 } finally {
   await browser.close();

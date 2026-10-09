@@ -1,3 +1,5 @@
+import { pushTexts } from './push';
+
 /** Navigation labels (also used by the keyboard shortcut overview). */
 const nav = {
   label: 'Hauptnavigation',
@@ -789,6 +791,84 @@ export const de = {
       lastDerivation: 'Letzte Schlüsselableitung',
       lastDerivationValue: (ms: number) => `${ms} ms`,
     },
+    notifications: {
+      title: 'Mitteilungen',
+      intro: 'Cockpit erinnert dich per Mitteilung – auch wenn die App geschlossen ist.',
+      reminders: {
+        morning: { title: 'Dein Tag', when: 'täglich gegen 7:00' },
+        dayReview: { title: 'Tages-Review', when: 'täglich gegen 21:30' },
+        weekReview: { title: 'Wochen-Review', when: 'sonntags gegen 19:00' },
+      },
+      how: 'GitHub verschickt sie kostenlos, oft ein paar Minuten später. Die Mitteilungen sind allgemein – GitHub kennt keine Daten aus Cockpit. Ein Tipp öffnet die passende Seite.',
+      status: {
+        off: 'Aus',
+        active: 'Eingerichtet',
+        changed: 'Neu einrichten',
+        denied: 'Nicht erlaubt',
+        homeScreenOnly: 'Nur Homescreen-App',
+        unsupported: 'Nicht möglich',
+      },
+      homeScreenOnly:
+        'Mitteilungen gibt es auf dem iPad nur in der Homescreen-App: in Safari „Teilen“ → „Zum Home-Bildschirm“, dann Cockpit von dort öffnen.',
+      unsupported: 'Dieser Browser kann keine Mitteilungen empfangen.',
+      denied:
+        'Mitteilungen sind für Cockpit ausgeschaltet. Erlaube sie in den iPad-Einstellungen → Mitteilungen → Cockpit.',
+      setup: 'Mitteilungen einrichten',
+      setupHint:
+        'Das iPad fragt einmal nach der Erlaubnis. Danach hinterlegst du einen Schlüssel bei GitHub (ca. 2 Minuten).',
+      setupDone: 'Eingerichtet – jetzt den Schlüssel bei GitHub hinterlegen.',
+      changed:
+        'Das iPad hat das Abo erneuert (z. B. nach dem Neuinstallieren der App). Bitte neu einrichten und den Schlüssel bei GitHub ersetzen.',
+      githubTitle: 'Bei GitHub hinterlegen (einmalig)',
+      step1:
+        'Schlüssel kopieren. Er enthält das Abo dieses iPad und die Schlüssel zum Senden – teile ihn mit niemandem.',
+      copyKey: 'Schlüssel kopieren',
+      keyCopied: 'Schlüssel kopiert',
+      copyFailed: 'Kopieren ging nicht – markiere den Text und kopiere ihn.',
+      keyLabel: 'Schlüssel (PUSH_CONFIG)',
+      step2:
+        'Bei GitHub ein neues Secret anlegen: Name eintragen, Schlüssel einfügen, „Add secret“ tippen. Gibt es das Secret schon, öffne es und tippe „Update“.',
+      openSecret: 'Secret anlegen',
+      secretName: 'Name',
+      copy: 'Kopieren',
+      nameCopied: 'Name kopiert',
+      step3:
+        'Probe senden: „Run workflow“ tippen, „test“ auswählen, starten. Nach etwa einer Minute kommt die Mitteilung.',
+      openWorkflow: 'Probe von GitHub',
+      lastPush: 'Zuletzt angekommen',
+      lastPushNone: 'Noch keine',
+      lastPushValue: (when: string, what: string) => `${when} · ${what}`,
+      lastPushKinds: {
+        morning: 'Dein Tag',
+        dayReview: 'Tages-Review',
+        weekReview: 'Wochen-Review',
+        test: 'Probe',
+        unknown: 'Mitteilung',
+      },
+      localTest: 'Probe auf diesem iPad',
+      localTestHint:
+        'Zeigt sofort eine Mitteilung – prüft die Erlaubnis, nicht den Weg über GitHub.',
+      localTestShown: 'Probe angezeigt',
+      service: 'Push-Dienst',
+      renew: 'Neu einrichten',
+      renewTitle: 'Neu einrichten?',
+      renewText:
+        'Cockpit erzeugt ein neues Abo mit neuen Schlüsseln. Danach musst du das Secret PUSH_CONFIG bei GitHub ersetzen, sonst kommen keine Mitteilungen mehr.',
+      disable: 'Ausschalten',
+      disableTitle: 'Mitteilungen ausschalten?',
+      disableText:
+        'Dieses iPad bekommt keine Mitteilungen mehr. Lösche danach auch das Secret PUSH_CONFIG bei GitHub.',
+      disabled: 'Mitteilungen ausgeschaltet',
+      errors: {
+        UNSUPPORTED: 'Dieser Browser kann keine Mitteilungen empfangen.',
+        DENIED:
+          'Mitteilungen sind nicht erlaubt. Erlaube sie in den iPad-Einstellungen → Mitteilungen → Cockpit.',
+        NO_SERVICE_WORKER:
+          'Cockpit ist noch nicht vollständig installiert. Bitte die App einmal schließen, neu öffnen und es erneut versuchen.',
+        SUBSCRIBE_FAILED:
+          'Das iPad konnte das Abo nicht anlegen. Bitte prüfe die Internetverbindung und versuche es noch einmal.',
+      },
+    },
     ai: {
       title: 'KI (optional)',
       enabled: 'KI verwenden',
@@ -1128,6 +1208,7 @@ export const de = {
       unknown: 'Die lokale Datenbank konnte nicht geöffnet werden. Bitte die App neu starten.',
     },
   },
+  push: pushTexts,
   pwa: {
     updateAvailable: 'Update verfügbar',
     reload: 'Neu laden',
