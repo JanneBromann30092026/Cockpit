@@ -6,6 +6,8 @@ import { ComingSoonPage } from '@/features/coming-soon/ComingSoonPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { DocumentDetailPage } from '@/features/documents/DocumentDetailPage';
 import { DocumentsPage } from '@/features/documents/DocumentsPage';
+import { LibraryEntryPage } from '@/features/library/LibraryEntryPage';
+import { LibraryPage } from '@/features/library/LibraryPage';
 import { DayReviewPage } from '@/features/reviews/DayReviewPage';
 import { ReviewsPage } from '@/features/reviews/ReviewsPage';
 import { WeekReviewPage } from '@/features/reviews/WeekReviewPage';
@@ -69,7 +71,8 @@ function AnimatedRoutes() {
             <Route path="/reviews" element={<ReviewsPage />} />
             <Route path="/reviews/day/:date" element={<DayReviewPage />} />
             <Route path="/reviews/week/:date" element={<WeekReviewPage />} />
-            <Route path="/library" element={<ComingSoonPage page="library" />} />
+            <Route path="/library" element={<LibraryPage />} />
+            <Route path="/library/:id" element={<LibraryEntryPage />} />
             <Route path="/brand" element={<ComingSoonPage page="brand" />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/dev/ui" element={<DevUiPage />} />

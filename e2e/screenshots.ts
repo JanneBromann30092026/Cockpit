@@ -217,6 +217,22 @@ async function mockAnthropic(page: Page) {
         ],
       });
     }
+    if (system.startsWith('Du beantwortest Fragen einer Person zu dem, was sie gelesen')) {
+      const content = body.messages?.[0]?.content;
+      const entries = (
+        JSON.parse(typeof content === 'string' ? content : '{}') as {
+          eintraege?: { ref: string; titel: string }[];
+        }
+      ).eintraege;
+      const refs = ['Atomic Habits', 'Hard Fork: KI im Alltag'].flatMap(
+        (title) => entries?.find((entry) => entry.titel === title)?.ref ?? [],
+      );
+      return JSON.stringify({
+        antwort:
+          'Gewohnheiten wachsen aus kleinen Schritten, die sich wie Zinseszins summieren. Am besten hängst du sie an bestehende Routinen und gestaltest deine Umgebung so, dass das Gute leicht fällt. Eine neue Gewohnheit hast du dir schon vorgenommen: Recherche zuerst mit KI, dann die Quellen prüfen.',
+        quellen: refs,
+      });
+    }
     if (system.startsWith('Du beantwortest Fragen')) {
       const content = body.messages?.[0]?.content;
       const contracts = (
@@ -372,6 +388,74 @@ async function createDemoData(page: Page) {
   await section.getByTestId('dev-demo-count').filter({ hasText: '15 Demo-Einträge' }).waitFor();
   await section.getByTestId('dev-demo-reviews').click();
   await section.getByTestId('dev-demo-count').filter({ hasText: '21 Demo-Einträge' }).waitFor();
+  await section.getByTestId('dev-demo-library').click();
+  await section.getByTestId('dev-demo-count').filter({ hasText: '30 Demo-Einträge' }).waitFor();
+}
+
+/** Demo data for a filtered run (SHOTS=library) that skipped the earlier shots. */
+async function ensureDemoLibrary(page: Page) {
+  if ((await page.getByTestId('library-card').count()) === 0) {
+    await createDemoData(page);
+    await page.goto(`${PREVIEW_URL}#/library`);
+  }
+  await page.getByTestId('library-card').first().waitFor();
+  await page.waitForTimeout(3200); // let the toasts disappear
+}
+
+async function libraryAsk(page: Page) {
+  await ensureDemoLibrary(page);
+  await page.getByRole('button', { name: 'Was habe ich zu Produktivität gelernt?' }).click();
+  await page.getByTestId('library-answer-item').first().waitFor();
+  await page.getByTestId('library-ask').evaluate((element) => element.scrollIntoView());
+}
+
+async function libraryAskClaude(page: Page) {
+  await ensureAi(page);
+  await page.goto(`${PREVIEW_URL}#/library`);
+  await page.getByTestId('library-ask-input').fill('Was habe ich über Gewohnheiten gelernt?');
+  await page.getByTestId('library-ask-submit').click();
+  await page.getByTestId('library-ask-claude').click();
+  await page.getByTestId('library-claude-answer').waitFor();
+  await page.waitForTimeout(3200); // let the toast disappear
+  await page
+    .getByTestId('library-claude-answer')
+    .evaluate((element) => element.scrollIntoView({ block: 'center' }));
+}
+
+async function libraryEntry(page: Page) {
+  await ensureDemoLibrary(page);
+  await page.getByTestId('library-card').filter({ hasText: 'Deep Work' }).click();
+  await page.getByTestId('library-point').first().waitFor();
+}
+
+async function libraryEditor(page: Page) {
+  await libraryEntry(page);
+  await page.getByTestId('library-edit').click();
+  await page.getByTestId('library-editor').waitFor();
+}
+
+async function libraryImport(page: Page) {
+  await ensureDemoLibrary(page);
+  await page.getByTestId('library-import-open').click();
+  await page
+    .getByTestId('import-text')
+    .fill(
+      [
+        'Bücher:',
+        '- Atomic Habits – James Clear #Gewohnheiten',
+        '- Sapiens von Yuval Noah Harari 12.03.2026 #Geschichte',
+        '- Die Kunst des klaren Denkens (Rolf Dobelli)',
+        '',
+        'Podcast: Lex Fridman #KI',
+        'https://www.youtube.com/watch?v=demo #Video',
+      ].join('\n'),
+    );
+}
+
+async function libraryImportPreview(page: Page) {
+  await libraryImport(page);
+  await page.getByTestId('import-recognize').click();
+  await page.getByTestId('import-row').first().waitFor();
 }
 
 async function demoTasks(page: Page) {
@@ -655,6 +739,13 @@ const SHOTS: Shot[] = [
   { route: '/reviews', name: 'reviews-dictation', prepare: reviewDictation },
   { route: '/reviews', name: 'reviews-week', prepare: reviewWeek, scroll: true },
   { route: '/reviews', name: 'reviews-week-done', prepare: reviewWeekDone },
+  { route: '/library', name: 'library-demo', prepare: ensureDemoLibrary, scroll: true },
+  { route: '/library', name: 'library-ask', prepare: libraryAsk },
+  { route: '/library', name: 'library-ask-claude', prepare: libraryAskClaude },
+  { route: '/library', name: 'library-entry', prepare: libraryEntry, scroll: true },
+  { route: '/library', name: 'library-editor', prepare: libraryEditor },
+  { route: '/library', name: 'library-import', prepare: libraryImport },
+  { route: '/library', name: 'library-import-preview', prepare: libraryImportPreview },
   { route: '/dev/ui', name: 'dev-modal', prepare: click('Modal öffnen') },
   { route: '/dev/ui', name: 'dev-sheet', prepare: click('Bottom Sheet öffnen') },
   { route: '/dev/ui', name: 'dev-side-panel', prepare: click('Seitenpanel öffnen') },

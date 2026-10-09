@@ -9,6 +9,11 @@ import {
 } from '@/data/prompts/contractQuestion';
 import { CONTRACT_EXTRACT_SCHEMA } from '@/data/prompts/contractExtract';
 import {
+  LIBRARY_ANSWER_SCHEMA,
+  LIBRARY_KEY_POINTS_SYSTEM_PROMPT,
+  LIBRARY_LIST_SCHEMA,
+} from '@/data/prompts/library';
+import {
   DAY_REVIEW_SCHEMA,
   DAY_REVIEW_SYSTEM_PROMPT,
   WEEK_REVIEW_SYSTEM_PROMPT,
@@ -383,5 +388,69 @@ describe('AnthropicProvider reviews', () => {
     await expect(
       provider(notExpected, { create: refused }).reviewDay(dayInput),
     ).rejects.toMatchObject({ code: 'REFUSED' });
+  });
+});
+
+describe('AnthropicProvider library', () => {
+  const params = (create: ReturnType<typeof vi.fn>) =>
+    (create.mock.calls[0] as unknown as [Anthropic.MessageCreateParamsNonStreaming])[0];
+
+  it('question: structured answer with known sources only', async () => {
+    const create = vi.fn(() =>
+      Promise.resolve(answer(JSON.stringify({ antwort: 'Feste Blöcke.', quellen: ['b2', 'b1'] }))),
+    );
+    const result = await provider(notExpected, { create }).askLibrary({
+      question: 'Fokus?',
+      entries: [{ ref: 'b1', titel: 'Deep Work', typ: 'Buch', themen: [], kernaussagen: [] }],
+    });
+    expect(result).toEqual({ text: 'Feste Blöcke.', sources: ['b1'], model: MODEL });
+    expect(params(create).output_config).toEqual({
+      format: { type: 'json_schema', schema: LIBRARY_ANSWER_SCHEMA },
+    });
+  });
+
+  it('list: entries from the structured answer; cut-off is an error', async () => {
+    const create = vi.fn(() =>
+      Promise.resolve(
+        answer(
+          JSON.stringify({
+            eintraege: [
+              { titel: 'Sapiens', typ: 'book', autor: null, link: null, datum: null, themen: [] },
+            ],
+          }),
+        ),
+      ),
+    );
+    const result = await provider(notExpected, { create }).parseLibraryList({
+      text: 'Sapiens',
+      defaultType: 'book',
+      today: '2026-10-09',
+    });
+    expect(result.entries).toEqual([{ title: 'Sapiens', type: 'book', topics: [] }]);
+    expect(params(create).output_config).toEqual({
+      format: { type: 'json_schema', schema: LIBRARY_LIST_SCHEMA },
+    });
+    const cut = vi.fn(() => Promise.resolve(answer('{"eintraege": [', 'max_tokens')));
+    await expect(
+      provider(notExpected, { create: cut }).parseLibraryList({
+        text: 'x',
+        defaultType: 'book',
+        today: '2026-10-09',
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+  });
+
+  it('key points: own prompt, only title, type, author and thoughts', async () => {
+    const create = vi.fn(() =>
+      Promise.resolve(answer(JSON.stringify({ kernaussagen: ['Feste Blöcke helfen.'] }))),
+    );
+    const result = await provider(notExpected, { create }).libraryKeyPoints({
+      title: 'Deep Work',
+      type: 'Buch',
+      thoughts: 'Blöcke am Morgen',
+    });
+    expect(result.points).toEqual(['Feste Blöcke helfen.']);
+    expect(params(create).system).toBe(LIBRARY_KEY_POINTS_SYSTEM_PROMPT);
+    expect(params(create).messages[0]?.content).toContain('Blöcke am Morgen');
   });
 });

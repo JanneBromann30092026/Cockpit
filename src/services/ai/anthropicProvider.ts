@@ -25,6 +25,23 @@ import {
   type WeekReviewRequest,
 } from '@/data/prompts/reviews';
 import {
+  buildLibraryKeyPointsMessage,
+  buildLibraryListMessage,
+  buildLibraryQuestionMessage,
+  LIBRARY_ANSWER_SCHEMA,
+  LIBRARY_KEY_POINTS_SCHEMA,
+  LIBRARY_KEY_POINTS_SYSTEM_PROMPT,
+  LIBRARY_LIST_SCHEMA,
+  LIBRARY_LIST_SYSTEM_PROMPT,
+  LIBRARY_QUESTION_SYSTEM_PROMPT,
+  parseLibraryAnswer,
+  parseLibraryKeyPoints,
+  parseLibraryList,
+  type LibraryKeyPointsRequest,
+  type LibraryListRequest,
+  type LibraryQuestionRequest,
+} from '@/data/prompts/library';
+import {
   buildDaySummaryMessage,
   DAY_SUMMARY_SYSTEM_PROMPT,
   parseDaySummary,
@@ -41,6 +58,9 @@ import {
   type ContractExtractResult,
   type DayReviewResult,
   type DaySummaryResult,
+  type LibraryAnswerResult,
+  type LibraryKeyPointsResult,
+  type LibraryListResult,
   type WeekReviewResult,
 } from './types';
 
@@ -98,6 +118,8 @@ const SUMMARY_TIMEOUT_MS = 45_000;
 /** Reading a whole contract (many pages, scans) takes longest. */
 const EXTRACT_MAX_TOKENS = 8192;
 const EXTRACT_TIMEOUT_MS = 120_000;
+/** A long list (up to 200 entries) needs room for every entry. */
+const LIST_MAX_TOKENS = 16_000;
 
 function defaultClient(apiKey: string): AnthropicClientLike {
   // The key comes from this device's encrypted storage; requests go straight to
@@ -339,6 +361,69 @@ export class AnthropicProvider implements AiProvider {
     const points = parseWeekReview(json);
     if (!points) throw new AiError('INVALID_RESPONSE');
     return { ...points, model };
+  }
+
+  /** "Was habe ich zu X gelernt?" – only titles, authors, dates, topics and key points. */
+  async askLibrary(
+    input: LibraryQuestionRequest,
+    options: AiCallOptions = {},
+  ): Promise<LibraryAnswerResult> {
+    const { json, model } = await this.structured(
+      {
+        max_tokens: SUMMARY_MAX_TOKENS,
+        system: LIBRARY_QUESTION_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: buildLibraryQuestionMessage(input) }],
+        output_config: { format: { type: 'json_schema', schema: LIBRARY_ANSWER_SCHEMA } },
+      },
+      options,
+      SUMMARY_TIMEOUT_MS,
+    );
+    const answer = parseLibraryAnswer(
+      json,
+      input.entries.map((entry) => entry.ref),
+    );
+    if (!answer) throw new AiError('INVALID_RESPONSE');
+    return { ...answer, model };
+  }
+
+  /** A pasted list → entries; unknown fields stay empty. */
+  async parseLibraryList(
+    input: LibraryListRequest,
+    options: AiCallOptions = {},
+  ): Promise<LibraryListResult> {
+    const { json, model } = await this.structured(
+      {
+        max_tokens: LIST_MAX_TOKENS,
+        system: LIBRARY_LIST_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: buildLibraryListMessage(input) }],
+        output_config: { format: { type: 'json_schema', schema: LIBRARY_LIST_SCHEMA } },
+      },
+      options,
+      EXTRACT_TIMEOUT_MS,
+    );
+    const entries = parseLibraryList(json, input.today);
+    if (!entries) throw new AiError('INVALID_RESPONSE');
+    return { entries, model };
+  }
+
+  /** Key points from my thoughts on one entry (nothing else of the library is sent). */
+  async libraryKeyPoints(
+    input: LibraryKeyPointsRequest,
+    options: AiCallOptions = {},
+  ): Promise<LibraryKeyPointsResult> {
+    const { json, model } = await this.structured(
+      {
+        max_tokens: SUMMARY_MAX_TOKENS,
+        system: LIBRARY_KEY_POINTS_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: buildLibraryKeyPointsMessage(input) }],
+        output_config: { format: { type: 'json_schema', schema: LIBRARY_KEY_POINTS_SCHEMA } },
+      },
+      options,
+      SUMMARY_TIMEOUT_MS,
+    );
+    const points = parseLibraryKeyPoints(json);
+    if (!points) throw new AiError('INVALID_RESPONSE');
+    return { points, model };
   }
 
   /** Looks up the configured model: validates key, network and model without generating tokens. */

@@ -3,6 +3,13 @@ import type { DocumentCategory } from '@/data/domain';
 import type { ContractAnswer, ContractQuestionRequest } from '@/data/prompts/contractQuestion';
 import type { DaySummaryRequest } from '@/data/prompts/daySummary';
 import type {
+  LibraryAnswer,
+  LibraryKeyPointsRequest,
+  LibraryListRequest,
+  LibraryQuestionRequest,
+  ParsedListEntry,
+} from '@/data/prompts/library';
+import type {
   DayReviewPoints,
   DayReviewRequest,
   WeekReviewPoints,
@@ -49,6 +56,21 @@ export interface WeekReviewResult extends WeekReviewPoints {
   model: string;
 }
 
+export interface LibraryAnswerResult extends LibraryAnswer {
+  model: string;
+}
+
+export interface LibraryListResult {
+  entries: ParsedListEntry[];
+  model: string;
+}
+
+export interface LibraryKeyPointsResult {
+  /** At most five key points, phrased by Claude from my thoughts. */
+  points: string[];
+  model: string;
+}
+
 export interface AiCallOptions {
   /** Cancels the request (e.g. when the user leaves the page). */
   signal?: AbortSignal;
@@ -79,7 +101,23 @@ export interface AiProvider {
   reviewDay(input: DayReviewRequest, options?: AiCallOptions): Promise<DayReviewResult>;
   /** Patterns, brakes and three changes from the week's daily reviews (only on tap). */
   reviewWeek(input: WeekReviewRequest, options?: AiCallOptions): Promise<WeekReviewResult>;
+  /** "Was habe ich zu X gelernt?" from the library entries (only on tap). */
+  askLibrary(input: LibraryQuestionRequest, options?: AiCallOptions): Promise<LibraryAnswerResult>;
+  /** A free-written list → library entries (only on tap). */
+  parseLibraryList(input: LibraryListRequest, options?: AiCallOptions): Promise<LibraryListResult>;
+  /** Key points from my own thoughts on an entry (only on tap). */
+  libraryKeyPoints(
+    input: LibraryKeyPointsRequest,
+    options?: AiCallOptions,
+  ): Promise<LibraryKeyPointsResult>;
 }
+
+export type {
+  LibraryKeyPointsRequest,
+  LibraryListRequest,
+  LibraryQuestionRequest,
+  ParsedListEntry,
+} from '@/data/prompts/library';
 
 export const AI_ERROR_CODES = [
   'NO_API_KEY',
