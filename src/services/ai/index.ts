@@ -3,6 +3,11 @@ import { VaultLockedError } from '@/services/crypto/session';
 import { API_KEY_SECRET } from './config';
 import type { ContractQuestionRequest } from '@/data/prompts/contractQuestion';
 import type { DaySummaryRequest } from '@/data/prompts/daySummary';
+import type {
+  LibraryKeyPointsRequest,
+  LibraryListRequest,
+  LibraryQuestionRequest,
+} from '@/data/prompts/library';
 import type { DayReviewRequest, WeekReviewRequest } from '@/data/prompts/reviews';
 import {
   AiError,
@@ -14,6 +19,9 @@ import {
   type ContractExtractResult,
   type DayReviewResult,
   type DaySummaryResult,
+  type LibraryAnswerResult,
+  type LibraryKeyPointsResult,
+  type LibraryListResult,
   type WeekReviewResult,
 } from './types';
 
@@ -114,6 +122,36 @@ export async function reviewWeekWithAi(
 ): Promise<WeekReviewResult> {
   const provider = await getAiProvider(config);
   return provider.reviewWeek(input, options);
+}
+
+/** "Was habe ich zu X gelernt?" (sends titles, topics and key points – only on tap). */
+export async function askLibraryWithAi(
+  config: AiConfig,
+  input: LibraryQuestionRequest,
+  options?: AiCallOptions,
+): Promise<LibraryAnswerResult> {
+  const provider = await getAiProvider(config);
+  return provider.askLibrary(input, options);
+}
+
+/** A pasted list → library entries (sends that list – only on tap). */
+export async function parseLibraryListWithAi(
+  config: AiConfig,
+  input: LibraryListRequest,
+  options?: AiCallOptions,
+): Promise<LibraryListResult> {
+  const provider = await getAiProvider(config);
+  return provider.parseLibraryList(input, options);
+}
+
+/** Key points from my thoughts on one entry (sends title, type, author, thoughts – on tap). */
+export async function libraryKeyPointsWithAi(
+  config: AiConfig,
+  input: LibraryKeyPointsRequest,
+  options?: AiCallOptions,
+): Promise<LibraryKeyPointsResult> {
+  const provider = await getAiProvider(config);
+  return provider.libraryKeyPoints(input, options);
 }
 
 /** Checks key, network and model (no tokens are generated, so it costs nothing). */

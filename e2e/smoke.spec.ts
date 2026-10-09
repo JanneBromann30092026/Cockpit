@@ -50,7 +50,7 @@ test('navigation switches pages', async ({ page }) => {
     ['Aufgaben', 'Keine offenen Aufgaben'],
     ['Verträge', 'Noch keine Verträge'],
     ['Reviews', 'Noch keine Reviews'],
-    ['Bibliothek', 'Kommt in Schritt 9'],
+    ['Bibliothek', 'Deine Bibliothek ist noch leer'],
     ['Marke', 'Kommt in Schritt 10'],
     ['Einstellungen', 'Darstellung'],
     ['Heute', 'Termine und Mails einbinden'],

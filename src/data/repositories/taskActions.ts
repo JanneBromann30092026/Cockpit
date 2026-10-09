@@ -11,6 +11,7 @@ import { commit } from './rows';
 import { demoDocumentPdf, type DemoDocument } from '../demo/documents';
 import { documentActions } from './documentActions';
 import { documentsRepo, reviewsRepo, tasksRepo } from './records';
+import { libraryActions, type LibraryInput } from './libraryActions';
 import type { DemoReview } from '../demo/reviews';
 
 export type TaskInput = Parameters<typeof tasksRepo.create>[0];
@@ -91,6 +92,12 @@ export const demoActions = {
     const fresh = demos.filter((demo) => !existing.has(`${demo.kind}:${demo.date}`));
     for (const demo of fresh) await reviewsRepo.create({ ...demo, demo: true });
     return fresh.length;
+  },
+
+  /** Invented library entries (one transaction). */
+  async createLibrary(inputs: readonly LibraryInput[]): Promise<number> {
+    await libraryActions.createMany(inputs.map((input) => ({ ...input, demo: true })));
+    return inputs.length;
   },
 
   count(): number {
