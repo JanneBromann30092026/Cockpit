@@ -18,6 +18,7 @@ import { Page } from '@/app/shell/Page';
 import { withAiMark } from '@/core/aiMark';
 import { addDays } from '@/core/dates';
 import { formatDate, formatShortDate, formatWeekday } from '@/core/format';
+import type { SortedSentence } from '@/core/reviews/dictation';
 import { changesDueDate, reviewWeek, weekFacts } from '@/core/reviews/reviews';
 import { reviewActions } from '@/data/repositories';
 import type { WeekReviewPoints } from '@/data/prompts/reviews';
@@ -36,6 +37,7 @@ import {
   type ProposalState,
 } from './ReviewParts';
 import { weekReviewRequest } from './reviewAi';
+import { DictationCard } from './DictationCard';
 import { addPoint, weekSuggestions } from './reviewText';
 import { useAutosave, useReviews } from './useReviews';
 
@@ -197,6 +199,23 @@ function WeekEditor({ sunday, initial }: { sunday: string; initial?: Review }) {
     setProposal({ status: 'idle' });
   };
 
+  /** Spoken sentences: what went well → patterns, problems → brakes, plans → changes. */
+  const applyDictation = (sentences: SortedSentence[]) => {
+    const of = (section: SortedSentence['section']) =>
+      sentences.filter((entry) => entry.section === section).map((entry) => entry.text);
+    change(setPatterns)(of('wentWell').reduce(addPoint, patterns));
+    change(setBrakes)(of('notWell').reduce(addPoint, brakes));
+    const nextChanges = of('improve').reduce(fillSlot, changes);
+    change(setChanges)(nextChanges);
+    // Only three changes: further plans are kept in the note.
+    const extra = [
+      ...of('improve').filter((sentence) => !nextChanges.includes(sentence.slice(0, LIMITS.title))),
+      ...of('note'),
+    ];
+    if (extra.length > 0) change(setNote)([note.trim(), ...extra].filter(Boolean).join('\n'));
+    toast.success(t.dictation.applied(sentences.length));
+  };
+
   const finish = async () => {
     setTouched(true);
     if (missing) return;
@@ -317,6 +336,7 @@ function WeekEditor({ sunday, initial }: { sunday: string; initial?: Review }) {
               <h3 className="text-sm font-medium text-fg-secondary">{t.week.fromDaily}</h3>
               <DailyPoints reviews={facts.daily} />
             </Surface>
+            <DictationCard variant="week" onApply={applyDictation} />
             <Surface className="flex flex-col gap-3">
               <Textarea
                 label={t.note}

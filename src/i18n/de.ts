@@ -624,6 +624,41 @@ export const de = {
       accept: 'Übernehmen',
       discard: 'Verwerfen',
     },
+    dictation: {
+      title: 'Sprechen statt tippen',
+      introDay:
+        'Erzähl einfach von deinem Tag – Cockpit schreibt mit und sortiert die Sätze in die drei Abschnitte.',
+      introWeek:
+        'Erzähl, was dir an der Woche auffällt – Cockpit sortiert in Muster, Bremsen und Änderungen.',
+      record: 'Aufnehmen',
+      stop: 'Stopp',
+      listening: 'Hört zu …',
+      more: 'Weiter aufnehmen',
+      textLabel: 'Gesprochener Text',
+      textPlaceholder:
+        'Hier erscheint, was du sagst. Du kannst auch tippen oder das Mikrofon der Tastatur nutzen.',
+      keyboardHint:
+        'Aufnehmen geht hier nicht – tippe ins Textfeld und nutze das Mikrofon auf der Tastatur.',
+      privacy:
+        'Die Spracherkennung übernimmt dein iPad (Apple) wie beim Diktieren. Cockpit speichert keine Aufnahme – nur den Text, den du übernimmst.',
+      problems: {
+        denied:
+          'Das Mikrofon ist nicht erlaubt. Erlaube es in den iPad-Einstellungen oder nutze das Mikrofon der Tastatur.',
+        unavailable: 'Aufnehmen geht hier gerade nicht – nutze das Mikrofon der Tastatur.',
+        noSpeech: 'Nichts gehört – bitte noch einmal.',
+        network: 'Die Spracherkennung braucht gerade eine Internetverbindung.',
+      },
+      sort: 'In Punkte aufteilen',
+      sortedTitle: 'So sortiert Cockpit',
+      sortHint: 'Passe die Zuordnung an und übernimm dann.',
+      day: { wentWell: 'Gut', notWell: 'Nicht gut', improve: 'Besser', note: 'Notiz' },
+      week: { wentWell: 'Muster', notWell: 'Bremse', improve: 'Änderung', note: 'Notiz' },
+      sectionLabel: (text: string) => `Zuordnung für „${text}“`,
+      apply: 'Übernehmen',
+      discard: 'Verwerfen',
+      applied: (n: number) => (n === 1 ? '1 Satz übernommen' : `${n} Sätze übernommen`),
+      empty: 'Kein Satz erkannt – sprich oder tippe ein paar Sätze.',
+    },
     autosave: { saving: 'Speichert …', saved: 'Gespeichert', failed: 'Nicht gespeichert' },
     finish: 'Review abschließen',
     finishAgain: 'Fertig',
