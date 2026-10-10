@@ -59,14 +59,14 @@ export function TagInput({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               transition={spring.snappy}
-              className="flex h-10 items-center gap-0.5 rounded-full bg-accent-soft pl-3.5 text-sm font-medium text-accent"
+              className="flex h-11 items-center gap-0.5 rounded-full bg-accent-soft pl-3.5 text-sm font-medium text-accent"
             >
               {tag}
               <button
                 type="button"
                 aria-label={removeLabel(tag)}
                 onClick={() => onChange(value.filter((t) => t !== tag))}
-                className="focus-ring flex size-10 items-center justify-center rounded-full hover:bg-accent-soft"
+                className="focus-ring flex size-11 items-center justify-center rounded-full hover:bg-accent-soft"
               >
                 <X size={14} aria-hidden />
               </button>
@@ -98,7 +98,7 @@ export function TagInput({
             }
           }}
           onBlur={() => draft.trim() && commit(draft)}
-          className="min-h-9 min-w-32 flex-1 bg-transparent px-2 text-base text-fg outline-none placeholder:text-fg-muted"
+          className="min-h-11 min-w-32 flex-1 bg-transparent px-2 text-base text-fg outline-none placeholder:text-fg-muted"
         />
       </div>
       {openSuggestions.length > 0 && (
@@ -113,7 +113,7 @@ export function TagInput({
               onClick={() => onChange(mergeTags(value, [tag]))}
               // Keep the keyboard open while picking suggestions.
               onMouseDown={(event) => event.preventDefault()}
-              className="focus-ring flex min-h-9 items-center gap-1 rounded-full border border-line px-3 text-sm text-fg-secondary hover:border-accent hover:text-accent"
+              className="focus-ring flex min-h-11 items-center gap-1 rounded-full border border-line px-3 text-sm text-fg-secondary hover:border-accent hover:text-accent"
             >
               <Plus size={13} aria-hidden />
               {tag}

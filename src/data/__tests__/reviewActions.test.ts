@@ -94,6 +94,24 @@ describe('reviews', () => {
     expect(reviews()).toHaveLength(1);
   });
 
+  it('demo reviews cover the open week and leave its weekly review open', () => {
+    const dates = (today: string) => demoReviews(today).map((review) => review.date);
+    // Saturday: the open week ends last Sunday; daily reviews up to yesterday.
+    const saturday = dates('2026-10-10');
+    expect(saturday[0]).toBe('2026-09-30');
+    expect(saturday.at(-2)).toBe('2026-10-09');
+    expect(saturday.at(-1)).toBe('2026-09-27');
+    // Sunday: five days before, the weekly review of last week.
+    expect(dates('2026-10-11')).toEqual([
+      '2026-10-06',
+      '2026-10-07',
+      '2026-10-08',
+      '2026-10-09',
+      '2026-10-10',
+      '2026-10-04',
+    ]);
+  });
+
   it('demo reviews leave days that already have a review alone', async () => {
     const today = '2026-10-05';
     await reviewActions.saveDraft('daily', '2026-10-04', { wentWell: ['Echt'] });

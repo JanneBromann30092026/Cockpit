@@ -60,7 +60,8 @@ function fillSlot(changes: readonly string[], change: string): string[] {
 
 function DayStrip({ days, reviews }: { days: string[]; reviews: Review[] }) {
   return (
-    <ol className="grid grid-cols-7 gap-1.5" data-testid="review-week-days">
+    // Reaches into the card padding so every day stays a full 44 px tap target.
+    <ol className="-mx-3 grid grid-cols-7" data-testid="review-week-days">
       {days.map((day) => {
         const review = reviews.find((entry) => entry.date === day);
         const label = formatWeekday(day);
@@ -69,7 +70,7 @@ function DayStrip({ days, reviews }: { days: string[]; reviews: Review[] }) {
             <Link
               to={`/reviews/day/${day}`}
               aria-label={t.week.dayLabel(formatShortDate(day))}
-              className="focus-ring flex min-h-11 flex-col items-center gap-1 rounded-lg py-1.5 text-xs text-fg-secondary active:bg-accent-soft"
+              className="focus-ring flex min-h-11 min-w-11 flex-col items-center gap-1 rounded-lg py-1.5 text-xs text-fg-secondary active:bg-accent-soft"
             >
               {label}
               <span

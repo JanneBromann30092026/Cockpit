@@ -10,7 +10,10 @@ App: https://jannebromann30092026.github.io/Cockpit/
 
 1. Die URL in Safari öffnen.
 2. Teilen-Symbol → **Zum Home-Bildschirm**.
-3. Ab dann immer über das Homescreen-Icon öffnen – nur so bleiben die Daten zuverlässig erhalten.
+3. Ab dann immer über das Homescreen-Icon öffnen – nur so bleiben die Daten zuverlässig erhalten. Safari-Tab und Homescreen-App haben getrennte Daten.
+4. In der App ein Passwort festlegen (im Schlüsselbund sichern lassen → Face ID).
+5. Einstellungen: Google verbinden, Mitteilungen einrichten (Wert als GitHub-Secret `PUSH_CONFIG`), optional KI mit eigenem API-Key.
+6. Regelmäßig unter Einstellungen → Backup eine verschlüsselte Backup-Datei in „Dateien“ sichern. Auf einem neuen iPad: Cockpit einrichten und das Backup mit seinem damaligen Passwort einspielen.
 
 ## Entwicklung
 

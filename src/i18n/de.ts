@@ -66,8 +66,24 @@ export const de = {
     resetSubmit: 'Alles löschen',
     devHint: (password: string) => `Entwicklermodus · Testpasswort: ${password}`,
     unavailable: 'Cockpit kann nicht starten',
+    browserHint:
+      'Du bist im Safari-Tab. Füge Cockpit zuerst über „Teilen“ → „Zum Home-Bildschirm“ hinzu und richte es dort ein – der Safari-Tab und die Home-Bildschirm-App haben getrennte Daten.',
+    restoreHint:
+      'Neues iPad oder neu begonnen? Richte Cockpit mit einem Passwort ein und spiele danach unter Einstellungen → Backup dein Backup ein.',
   },
   today: {
+    install: {
+      title: 'Cockpit auf den Home-Bildschirm',
+      text: 'Als App vom Home-Bildschirm startet Cockpit im Vollbild, bekommt Mitteilungen und deine Daten bleiben zuverlässig erhalten.',
+      steps: [
+        'Tippe in Safari oben auf „Teilen“.',
+        'Wähle „Zum Home-Bildschirm“.',
+        'Tippe auf „Hinzufügen“ und öffne Cockpit über das neue Symbol.',
+      ],
+      separate:
+        'Wichtig: Die App vom Home-Bildschirm hat eigene Daten. Was du hier im Safari-Tab angelegt hast, bringst du per Backup hinüber.',
+      dismiss: 'Ausblenden',
+    },
     backupPrompt: {
       title: 'Zeit für ein Backup',
       text: 'Dein letztes Backup ist eine Weile her. Sichere deine Daten verschlüsselt in der Dateien-App.',

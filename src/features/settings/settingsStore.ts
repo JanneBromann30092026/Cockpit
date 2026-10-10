@@ -32,6 +32,8 @@ const schemas = {
   // Backups (step 11): when the last one was saved and how often to remind – no personal data
   lastBackupAt: z.union([z.literal(''), z.iso.datetime()]),
   backupReminderDays: z.literal(BACKUP_REMINDER_DAYS),
+  // Installation hint in "Heute" (only shown in a Safari tab)
+  installHintDismissed: z.boolean(),
   // Developer
   devMode: z.boolean(),
 };
@@ -49,6 +51,7 @@ export const SETTINGS_DEFAULTS: SettingsValues = {
   googleClientId: '',
   lastBackupAt: '',
   backupReminderDays: 14,
+  installHintDismissed: false,
   devMode: false,
 };
 

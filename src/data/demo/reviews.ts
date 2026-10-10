@@ -3,7 +3,7 @@
  * `today` (developer mode and screenshots). Marked as demo like all demo data.
  */
 import { reviewWeek } from '@/core/reviews/reviews';
-import { addDays, weekday } from '@/core/dates';
+import { addDays } from '@/core/dates';
 import type { reviewsRepo } from '../repositories/records';
 
 export type DemoReview = Parameters<typeof reviewsRepo.create>[0];
@@ -38,17 +38,20 @@ const DAYS: Omit<DemoReview, 'kind' | 'date'>[] = [
   },
 ];
 
-/** Five finished daily reviews before today and the weekly review of last week. */
+/**
+ * Finished daily reviews up to yesterday – at least five, and always covering the week that
+ * is open for review – plus the weekly review of the week before (the open one stays open).
+ */
 export function demoReviews(today: string, now: Date = new Date()): DemoReview[] {
   const doneAt = now.toISOString();
-  const daily: DemoReview[] = DAYS.map((fields, index) => ({
-    ...fields,
-    kind: 'daily',
-    date: addDays(today, index - DAYS.length),
-    doneAt,
-  }));
-  // Last week's Sunday: on a Sunday the current week is still to be reviewed.
-  const sunday = weekday(today) === 6 ? addDays(today, -7) : reviewWeek(today);
+  const openWeek = reviewWeek(today);
+  const fiveBefore = addDays(today, -DAYS.length);
+  const first = addDays(openWeek, -4) < fiveBefore ? addDays(openWeek, -4) : fiveBefore;
+  const daily: DemoReview[] = [];
+  for (let date = first, index = 0; date < today; date = addDays(date, 1), index += 1) {
+    daily.push({ ...DAYS[index % DAYS.length]!, kind: 'daily', date, doneAt });
+  }
+  const sunday = addDays(openWeek, -7);
   const weekly: DemoReview = {
     kind: 'weekly',
     date: sunday,

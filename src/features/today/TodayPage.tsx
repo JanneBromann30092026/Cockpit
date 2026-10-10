@@ -30,6 +30,7 @@ import { DeadlineList } from '@/features/documents/DeadlineList';
 import { useDocuments } from '@/features/documents/useDocuments';
 import { ReviewPromptCard } from '@/features/reviews/ReviewPromptCard';
 import { BackupPromptCard } from './BackupPromptCard';
+import { InstallCard } from './InstallCard';
 import { useGoogleClientId, useSettings } from '@/features/settings/settingsStore';
 import { TaskEditor } from '@/features/tasks/TaskEditor';
 import { TaskRow } from '@/features/tasks/TaskRow';
@@ -685,6 +686,7 @@ export function TodayPage() {
           )}
         </div>
 
+        <InstallCard />
         <ReviewPromptCard now={now} today={today} />
         <BackupPromptCard now={now} />
         {!demo && !connected && hasData && sessionError === 'EXPIRED' && <ExpiredBanner />}
