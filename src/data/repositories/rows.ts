@@ -62,7 +62,12 @@ export interface PendingDelete {
  * Encrypts first (Web Crypto must not run inside an IndexedDB transaction), then writes
  * everything in one transaction and finally updates the in-memory store.
  */
-export async function commit(writes: PendingWrite[], deletes: PendingDelete[] = []): Promise<void> {
+export async function commit(
+  writes: PendingWrite[],
+  deletes: PendingDelete[] = [],
+  /** Changes to the `files` table that belong to the same transaction. */
+  files?: () => Promise<unknown>,
+): Promise<void> {
   const key = requireSessionKey();
   const rows = await Promise.all(
     writes.map(async ({ table, record }) => ({ table, row: await encryptRow(table, record, key) })),
@@ -75,13 +80,14 @@ export async function commit(writes: PendingWrite[], deletes: PendingDelete[] = 
     byTable.set(table, group);
   });
   const tables = [...new Set([...byTable.keys(), ...deletes.map((d) => d.table)])];
-  if (tables.length === 0) return;
+  if (tables.length === 0 && !files) return;
   await db.transaction(
     'rw',
-    tables.map((table) => db.table(table)),
+    [...tables.map((table) => db.table(table)), ...(files ? [db.files] : [])],
     async () => {
       for (const { table, ids } of deletes) await db.table(table).bulkDelete(ids);
       for (const [table, group] of byTable) await db.table(table).bulkPut(group.rows);
+      if (files) await files();
     },
   );
   for (const { table, ids } of deletes) dataStore.remove(table, ids);
