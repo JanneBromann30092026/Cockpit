@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useLocation } from 'react-router';
 import { motion } from 'motion/react';
 import { Check, Keyboard, Trash2 } from 'lucide-react';
 import { Button, ConfirmDialog, SegmentedControl, Surface, Toggle } from '@/components/ui';
@@ -8,6 +9,7 @@ import { Page } from '@/app/shell/Page';
 import { de } from '@/i18n/de';
 import { vault } from '@/services/vault';
 import { AiSettings } from './AiSettings';
+import { BackupSettings } from './BackupSettings';
 import { GoogleSettings } from './GoogleSettings';
 import { PushSettings } from './PushSettings';
 import { SecuritySettings } from './SecuritySettings';
@@ -22,13 +24,15 @@ function Section({
   title,
   children,
   testId,
+  id,
 }: {
   title: string;
   children: ReactNode;
   testId?: string;
+  id?: string;
 }) {
   return (
-    <section className="flex flex-col gap-2" data-testid={testId}>
+    <section id={id} className="flex scroll-mt-6 flex-col gap-2" data-testid={testId}>
       <h2 className="px-2 text-sm font-semibold tracking-wide text-fg-muted uppercase">{title}</h2>
       <Surface>{children}</Surface>
     </section>
@@ -60,6 +64,17 @@ export function SettingsPage() {
   const devMode = useSettings((s) => s.devMode);
   const set = useSettings((s) => s.set);
   const [resetting, setResetting] = useState(false);
+  const { hash } = useLocation();
+
+  // "/settings#backup" (from the reminder in "Heute") jumps to that section once it is shown.
+  useEffect(() => {
+    const id = hash.slice(1);
+    if (!id) return;
+    const timer = setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [hash]);
 
   return (
     <Page title={t.title} width="narrow" actions={<SavedIndicator />}>
@@ -112,6 +127,10 @@ export function SettingsPage() {
 
         <Section title={t.ai.title} testId="settings-ai">
           <AiSettings />
+        </Section>
+
+        <Section title={t.backup.title} testId="settings-backup" id="backup">
+          <BackupSettings />
         </Section>
 
         <Section title={t.storage.title} testId="settings-storage">

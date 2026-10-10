@@ -737,6 +737,36 @@ const click = (name: string) => async (page: Page) => {
   await page.waitForTimeout(500);
 };
 
+async function settingsBackup(page: Page) {
+  const section = page.getByTestId('settings-backup');
+  await section.scrollIntoViewIfNeeded();
+  await section.getByTestId('backup-create').click();
+  await section.getByTestId('backup-ready').waitFor();
+  await section.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+}
+
+async function settingsRestore(page: Page) {
+  const section = page.getByTestId('settings-backup');
+  await section.getByTestId('backup-create').click();
+  await section.getByTestId('backup-ready').waitFor();
+  const download = page.waitForEvent('download');
+  await section.getByTestId('backup-save').click();
+  const path = await (await download).path();
+  await section.getByTestId('backup-file-input').setInputFiles(path);
+  await page.getByTestId('backup-restore').waitFor();
+  await page.getByTestId('backup-password').fill(TEST_PASSWORD);
+}
+
+async function todayBackupPrompt(page: Page) {
+  // A filtered run has no data yet (the reminder needs some).
+  if ((await page.getByTestId('backup-prompt').count()) === 0) {
+    await page.goto(`${PREVIEW_URL}#/dev/ui`);
+    await page.getByTestId('dev-demo-tasks').click();
+    await page.goto(`${PREVIEW_URL}#/today`);
+  }
+  await page.getByTestId('backup-prompt').scrollIntoViewIfNeeded();
+}
+
 async function focusMode(page: Page) {
   await page.getByTestId('dev-section-focus').scrollIntoViewIfNeeded();
   await click('Fokusmodus testen')(page);
@@ -804,6 +834,9 @@ const SHOTS: Shot[] = [
   { route: '/brand', name: 'brand-build', prepare: brandBuild, scroll: true },
   { route: '/brand', name: 'brand-build-claude', prepare: brandBuildClaude },
   { route: '/brand', name: 'brand-interview', prepare: brandInterview },
+  { route: '/settings', name: 'settings-backup', prepare: settingsBackup },
+  { route: '/today', name: 'today-backup-prompt', prepare: todayBackupPrompt },
+  { route: '/settings', name: 'settings-restore', prepare: settingsRestore },
   { route: '/dev/ui', name: 'dev-modal', prepare: click('Modal öffnen') },
   { route: '/dev/ui', name: 'dev-sheet', prepare: click('Bottom Sheet öffnen') },
   { route: '/dev/ui', name: 'dev-side-panel', prepare: click('Seitenpanel öffnen') },

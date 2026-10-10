@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { create } from 'zustand';
+import { BACKUP_REMINDER_DAYS } from '@/core/backup/format';
 import { DEFAULT_LOCK_AFTER_MINUTES, LOCK_AFTER_MINUTES } from '@/core/lock';
 import { settingsRepo } from '@/data/repositories';
 import { GOOGLE_CLIENT_ID_PATTERN } from '@/core/google/oauth';
@@ -28,6 +29,9 @@ const schemas = {
   aiModel: z.string().trim().regex(AI_MODEL_PATTERN),
   // Google: own public OAuth client ID for tests ("" = the built-in one)
   googleClientId: z.union([z.literal(''), z.string().trim().regex(GOOGLE_CLIENT_ID_PATTERN)]),
+  // Backups (step 11): when the last one was saved and how often to remind – no personal data
+  lastBackupAt: z.union([z.literal(''), z.iso.datetime()]),
+  backupReminderDays: z.literal(BACKUP_REMINDER_DAYS),
   // Developer
   devMode: z.boolean(),
 };
@@ -43,6 +47,8 @@ export const SETTINGS_DEFAULTS: SettingsValues = {
   aiEnabled: false,
   aiModel: DEFAULT_AI_MODEL,
   googleClientId: '',
+  lastBackupAt: '',
+  backupReminderDays: 14,
   devMode: false,
 };
 

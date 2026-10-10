@@ -68,6 +68,13 @@ export const de = {
     unavailable: 'Cockpit kann nicht starten',
   },
   today: {
+    backupPrompt: {
+      title: 'Zeit für ein Backup',
+      text: 'Dein letztes Backup ist eine Weile her. Sichere deine Daten verschlüsselt in der Dateien-App.',
+      textFirst:
+        'Du hast noch kein Backup. Ohne Backup sind deine Daten weg, wenn du das Passwort vergisst oder das iPad verlierst.',
+      open: 'Backup erstellen',
+    },
     reviewPrompt: {
       dayTitle: 'Zeit für deinen Tages-Review',
       dayText: 'Was lief gut, was nicht, was machst du morgen besser? Fünf Minuten genügen.',
@@ -1149,6 +1156,56 @@ export const de = {
         SUBSCRIBE_FAILED:
           'Das iPad konnte das Abo nicht anlegen. Bitte prüfe die Internetverbindung und versuche es noch einmal.',
       },
+    },
+    backup: {
+      title: 'Backup',
+      intro:
+        'Sichere alles in einer Datei: Aufgaben, Verträge mit Originalen, Reviews, Bibliothek und Markenprofil – verschlüsselt mit deinem App-Passwort.',
+      notIncluded:
+        'Nicht enthalten: API-Key, Google-Verbindung und Push-Abo – die richtest du nach einer Wiederherstellung neu ein.',
+      last: 'Letztes Backup',
+      never: 'Noch keins',
+      lastValue: (date: string, days: number) =>
+        days === 0
+          ? `heute (${date})`
+          : days === 1
+            ? `gestern (${date})`
+            : `vor ${days} Tagen (${date})`,
+      create: 'Backup erstellen',
+      creating: 'Backup wird erstellt …',
+      ready: (size: string) => `Backup bereit (${size})`,
+      readyHint: 'Tippe auf „Sichern“ und wähle „In Dateien sichern“ – z. B. in iCloud Drive.',
+      save: 'Sichern',
+      saved: 'Backup gesichert',
+      downloaded: 'Backup heruntergeladen',
+      failed: 'Das Backup konnte nicht erstellt werden.',
+      reminder: 'Erinnern',
+      reminderOptions: { 0: 'Nie', 7: 'Wöchentlich', 14: 'Alle 2 Wochen', 30: 'Monatlich' },
+      restore: 'Backup wiederherstellen',
+      restoreHint: 'Wähle eine Backup-Datei (Cockpit-Backup-….json), z. B. aus der Dateien-App.',
+      restoreTitle: 'Backup wiederherstellen',
+      fileInfo: (date: string, version: string) => `Backup vom ${date} · App ${version}`,
+      fileContents: (rows: number, files: number) =>
+        `${rows} ${rows === 1 ? 'Eintrag' : 'Einträge'}${files > 0 ? ` · ${files} ${files === 1 ? 'Original' : 'Originale'}` : ''}`,
+      password: 'Passwort des Backups',
+      passwordHint: 'Das App-Passwort, das beim Erstellen des Backups galt.',
+      replace: 'Aktuelle Daten ersetzen',
+      replaceHint:
+        'Aus: Das Backup wird ergänzt, bei gleichen Einträgen gewinnt der neuere. An: Alles Aktuelle wird vorher gelöscht.',
+      start: 'Wiederherstellen',
+      restoring: 'Wird wiederhergestellt …',
+      wrongPassword: 'Das Passwort passt nicht zu diesem Backup.',
+      problems: {
+        notBackup: 'Das ist keine Cockpit-Backup-Datei.',
+        version: 'Dieses Backup stammt aus einer neueren App-Version. Bitte Cockpit aktualisieren.',
+        damaged: 'Die Backup-Datei ist beschädigt.',
+      },
+      restoreFailed: 'Die Wiederherstellung hat nicht geklappt. Es wurde nichts geändert.',
+      done: (restored: number, kept: number) =>
+        `${restored} ${restored === 1 ? 'Eintrag' : 'Einträge'} wiederhergestellt${kept > 0 ? ` · ${kept} aktuellere behalten` : ''}`,
+      unreadable: (n: number) =>
+        `${n} ${n === 1 ? 'Eintrag war' : 'Einträge waren'} nicht lesbar und wurden übersprungen.`,
+      cancel: 'Abbrechen',
     },
     ai: {
       title: 'KI (optional)',
