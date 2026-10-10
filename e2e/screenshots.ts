@@ -393,6 +393,11 @@ async function createDemoData(page: Page) {
   await section.getByTestId('dev-demo-count').filter({ hasText: '15 Demo-Einträge' }).waitFor();
   // The number of demo reviews depends on the weekday.
   await section.getByTestId('dev-demo-reviews').click();
+  // Written in one go; the toast comes after, then the count is final.
+  await page
+    .getByText(/Demo-Reviews angelegt/)
+    .first()
+    .waitFor();
   await section.getByTestId('dev-demo-count').filter({ hasNotText: /^15 / }).waitFor();
   const count = async () =>
     Number.parseInt((await section.getByTestId('dev-demo-count').innerText()) || '0', 10);
@@ -715,11 +720,17 @@ async function reviewDictation(page: Page) {
 async function reviewWeek(page: Page) {
   await ensureDemoReviews(page);
   await page.goto(`${PREVIEW_URL}#/reviews/week/current`);
-  await page.getByTestId('review-patterns').getByTestId('review-suggestion').first().click();
-  await page.getByTestId('review-brakes').getByTestId('review-suggestion').first().click();
-  const changes = page.getByTestId('review-changes');
-  await changes.getByTestId('review-suggestion').first().click();
-  await changes.getByTestId('review-suggestion').first().click();
+  await page.getByTestId('review-patterns').waitFor();
+  await page.waitForTimeout(400);
+  // The draft is saved: a second run (reviewWeekDone) finds the points already taken.
+  const take = async (section: string) => {
+    const suggestion = page.getByTestId(section).getByTestId('review-suggestion').first();
+    if (await suggestion.isVisible()) await suggestion.click();
+  };
+  await take('review-patterns');
+  await take('review-brakes');
+  await take('review-changes');
+  await take('review-changes');
   await page.getByTestId('review-change-3').fill('Sonntags 15 Minuten die Woche planen');
 }
 
