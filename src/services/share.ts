@@ -42,3 +42,18 @@ export async function shareFile(file: File): Promise<ShareOutcome> {
   downloadFile(file, file.name);
   return 'downloaded';
 }
+
+/** Shares plain text (share sheet); false when the device cannot share text. */
+export async function shareText(
+  text: string,
+  title?: string,
+): Promise<ShareOutcome | 'unsupported'> {
+  if (typeof globalThis.navigator?.share !== 'function') return 'unsupported';
+  try {
+    await navigator.share({ text, ...(title ? { title } : {}) });
+    return 'shared';
+  } catch (error: unknown) {
+    if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled';
+    return 'unsupported';
+  }
+}

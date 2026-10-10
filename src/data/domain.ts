@@ -51,3 +51,42 @@ export type ReviewKind = (typeof REVIEW_KINDS)[number];
 /** Types of entries in the life library. */
 export const LIBRARY_TYPES = ['book', 'article', 'newsletter', 'video', 'podcast'] as const;
 export type LibraryType = (typeof LIBRARY_TYPES)[number];
+
+/** Brand kit (step 10): colour roles of the palette. */
+export const BRAND_COLOR_ROLES = ['primary', 'secondary', 'accent', 'background', 'text'] as const;
+export type BrandColorRole = (typeof BRAND_COLOR_ROLES)[number];
+
+/** Fonts every iPad has (preview works without loading web fonts). */
+export const BRAND_FONTS = [
+  'inter',
+  'system',
+  'avenir',
+  'futura',
+  'gillSans',
+  'helvetica',
+  'georgia',
+  'charter',
+  'palatino',
+  'baskerville',
+  'didot',
+  'menlo',
+] as const;
+export type BrandFont = (typeof BRAND_FONTS)[number];
+
+export const BRAND_RADII = ['sharp', 'soft', 'round'] as const;
+export type BrandRadius = (typeof BRAND_RADII)[number];
+
+/** What "Damit bauen" writes. */
+export const BRAND_DRAFT_KINDS = ['newsletter', 'landing', 'instagram', 'video'] as const;
+export type BrandDraftKind = (typeof BRAND_DRAFT_KINDS)[number];
+
+/** Profile parts Claude phrased (marked "(Claude)" until edited). */
+export const BRAND_AI_FIELDS = [
+  'tone',
+  'values',
+  'wordsUsed',
+  'wordsAvoided',
+  'examples',
+  'design',
+] as const;
+export type BrandAiField = (typeof BRAND_AI_FIELDS)[number];

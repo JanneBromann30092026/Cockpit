@@ -217,6 +217,11 @@ async function mockAnthropic(page: Page) {
         ],
       });
     }
+    if (system.startsWith('Du schreibst Texte im Ton eines Markenprofils')) {
+      return JSON.stringify({
+        text: 'Hey du, kennst du das Gefühl, nie fertig zu werden?\n\nNeben dem Job zu lernen heißt nicht, alles zu schaffen. Es heißt, jeden Tag einen kleinen Hebel zu finden.\n\nMein Plan, Schritt für Schritt:\n1. Zwei feste Lernblöcke pro Woche\n2. Handy in die Küche\n3. Sonntags 15 Minuten planen\n\nWas ist dein kleiner Hebel? Schreib es in die Kommentare.\n\n#lernen #studium #nebenjob #produktivität',
+      });
+    }
     if (system.startsWith('Du beantwortest Fragen einer Person zu dem, was sie gelesen')) {
       const content = body.messages?.[0]?.content;
       const entries = (
@@ -390,6 +395,54 @@ async function createDemoData(page: Page) {
   await section.getByTestId('dev-demo-count').filter({ hasText: '21 Demo-Einträge' }).waitFor();
   await section.getByTestId('dev-demo-library').click();
   await section.getByTestId('dev-demo-count').filter({ hasText: '30 Demo-Einträge' }).waitFor();
+  await section.getByTestId('dev-demo-brand').click();
+  await section.getByTestId('dev-demo-count').filter({ hasText: '31 Demo-Einträge' }).waitFor();
+}
+
+/** Demo profile for a filtered run (SHOTS=brand) that skipped the earlier shots. */
+async function ensureDemoBrand(page: Page) {
+  await page.goto(`${PREVIEW_URL}#/brand`);
+  if ((await page.getByTestId('brand-page').count()) === 0) {
+    await createDemoData(page);
+    await page.goto(`${PREVIEW_URL}#/brand`);
+  }
+  await page.getByTestId('brand-page').waitFor();
+  await page.waitForTimeout(3200); // let the toasts disappear
+}
+
+/** The demo profile's answer to the tone question (after the other brand shots). */
+async function brandInterview(page: Page) {
+  await ensureDemoBrand(page);
+  await page.goto(`${PREVIEW_URL}#/brand/interview?q=5`);
+  await page.getByTestId('interview-answer').waitFor();
+  await page.locator('textarea').evaluate((element) => element.blur());
+}
+
+async function brandDesign(page: Page) {
+  await ensureDemoBrand(page);
+  await page.goto(`${PREVIEW_URL}#/brand?tab=design`);
+  await page.getByTestId('brand-swatch').first().waitFor();
+}
+
+async function brandBuild(page: Page) {
+  await ensureDemoBrand(page);
+  await page.goto(`${PREVIEW_URL}#/brand?tab=build`);
+  await page.getByTestId('brand-topic').fill('Lernen neben dem Job');
+  await page.getByTestId('brand-cta').fill('Abonnieren und Kommentar schreiben');
+  await page.getByTestId('brand-template').click();
+  await page.getByTestId('brand-result').evaluate((element) => element.scrollIntoView());
+}
+
+async function brandBuildClaude(page: Page) {
+  await ensureAi(page);
+  await ensureDemoBrand(page);
+  await page.goto(`${PREVIEW_URL}#/brand?tab=build`);
+  await page.getByRole('button', { name: 'Instagram-Post' }).click();
+  await page.getByTestId('brand-topic').fill('Lernen neben dem Job');
+  await page.getByTestId('brand-write-claude').click();
+  await page.getByTestId('brand-result').waitFor();
+  await page.waitForTimeout(3200);
+  await page.getByTestId('brand-result').evaluate((element) => element.scrollIntoView());
 }
 
 /** Demo data for a filtered run (SHOTS=library) that skipped the earlier shots. */
@@ -746,6 +799,11 @@ const SHOTS: Shot[] = [
   { route: '/library', name: 'library-editor', prepare: libraryEditor },
   { route: '/library', name: 'library-import', prepare: libraryImport },
   { route: '/library', name: 'library-import-preview', prepare: libraryImportPreview },
+  { route: '/brand', name: 'brand-profile', prepare: ensureDemoBrand, scroll: true },
+  { route: '/brand', name: 'brand-design', prepare: brandDesign, scroll: true },
+  { route: '/brand', name: 'brand-build', prepare: brandBuild, scroll: true },
+  { route: '/brand', name: 'brand-build-claude', prepare: brandBuildClaude },
+  { route: '/brand', name: 'brand-interview', prepare: brandInterview },
   { route: '/dev/ui', name: 'dev-modal', prepare: click('Modal öffnen') },
   { route: '/dev/ui', name: 'dev-sheet', prepare: click('Bottom Sheet öffnen') },
   { route: '/dev/ui', name: 'dev-side-panel', prepare: click('Seitenpanel öffnen') },

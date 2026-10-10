@@ -14,3 +14,4 @@ export {
 } from './documentActions';
 export { reviewActions, type ChangeTasks, type ReviewDraft } from './reviewActions';
 export { libraryActions, type LibraryInput, type LibraryPatch } from './libraryActions';
+export { brandActions, currentBrand, ruleDesign, type BrandPatch } from './brandActions';

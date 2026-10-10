@@ -2,6 +2,7 @@ import type { ContractExtraction } from '@/core/documents/extract';
 import type { DocumentCategory } from '@/data/domain';
 import type { ContractAnswer, ContractQuestionRequest } from '@/data/prompts/contractQuestion';
 import type { DaySummaryRequest } from '@/data/prompts/daySummary';
+import type { BrandAiProfile, BrandProfileRequest, BrandWriteRequest } from '@/data/prompts/brand';
 import type {
   LibraryAnswer,
   LibraryKeyPointsRequest,
@@ -71,6 +72,16 @@ export interface LibraryKeyPointsResult {
   model: string;
 }
 
+export interface BrandProfileResult {
+  profile: BrandAiProfile;
+  model: string;
+}
+
+export interface BrandWriteResult {
+  text: string;
+  model: string;
+}
+
 export interface AiCallOptions {
   /** Cancels the request (e.g. when the user leaves the page). */
   signal?: AbortSignal;
@@ -110,7 +121,13 @@ export interface AiProvider {
     input: LibraryKeyPointsRequest,
     options?: AiCallOptions,
   ): Promise<LibraryKeyPointsResult>;
+  /** Brand profile and design from the interview answers (only on tap). */
+  brandProfile(input: BrandProfileRequest, options?: AiCallOptions): Promise<BrandProfileResult>;
+  /** A text in the profile's voice (only on tap). */
+  brandWrite(input: BrandWriteRequest, options?: AiCallOptions): Promise<BrandWriteResult>;
 }
+
+export type { BrandAiProfile, BrandProfileRequest, BrandWriteRequest } from '@/data/prompts/brand';
 
 export type {
   LibraryKeyPointsRequest,

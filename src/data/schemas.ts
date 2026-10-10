@@ -6,6 +6,11 @@
  */
 import { z } from 'zod';
 import {
+  BRAND_AI_FIELDS,
+  BRAND_COLOR_ROLES,
+  BRAND_DRAFT_KINDS,
+  BRAND_FONTS,
+  BRAND_RADII,
   DOCUMENT_AI_FIELDS,
   DOCUMENT_CATEGORIES,
   LIBRARY_TYPES,
@@ -37,6 +42,8 @@ export const LIMITS = {
   /** Attached originals per contract. */
   files: 20,
   noticeAmount: 36,
+  /** Saved texts of "Damit bauen". */
+  drafts: 30,
 } as const;
 
 // --- Building blocks --------------------------------------------------------
@@ -196,14 +203,54 @@ export const libraryInputSchema = z.object(libraryFields);
 
 // --- Brand profile (step 10) ---------------------------------------------------
 
+/** "#1d4ed8" – six hex digits, stored lower case. */
+export const hexColor = z
+  .string()
+  .trim()
+  .regex(/^#[0-9a-fA-F]{6}$/)
+  .transform((value) => value.toLowerCase());
+
+export const brandDesignSchema = z.object({
+  colors: z.object(
+    Object.fromEntries(BRAND_COLOR_ROLES.map((role) => [role, hexColor])) as Record<
+      (typeof BRAND_COLOR_ROLES)[number],
+      typeof hexColor
+    >,
+  ),
+  headingFont: z.enum(BRAND_FONTS),
+  bodyFont: z.enum(BRAND_FONTS),
+  radius: z.enum(BRAND_RADII).default('soft'),
+});
+export type BrandDesign = z.output<typeof brandDesignSchema>;
+
+export const brandDraftSchema = z.object({
+  id,
+  kind: z.enum(BRAND_DRAFT_KINDS),
+  topic: requiredText(LIMITS.title),
+  text: requiredText(LIMITS.notes),
+  /** Written by the optional AI; shown with "(Claude)". */
+  byClaude: z.boolean().default(false),
+  createdAt: timestamp,
+});
+export type BrandDraft = z.output<typeof brandDraftSchema>;
+
 export const brandFields = {
-  /** Interview answers by question key (questions live in src/data with step 10). */
+  /** Interview answers by question key (questions: src/data/brand/interview.ts). */
   answers: z.record(z.string().max(LIMITS.topic), z.string().max(LIMITS.text)).default({}),
+  /** When the interview was finished (until then the profile is a draft). */
+  interviewDoneAt: timestamp.optional(),
   tone: optionalText(LIMITS.text),
   values: points,
   wordsUsed: points,
   wordsAvoided: points,
   examples: points,
+  design: brandDesignSchema.optional(),
+  drafts: z.array(brandDraftSchema).max(LIMITS.drafts).default([]),
+  /** Parts Claude phrased and nobody changed since. */
+  aiFields: z
+    .array(z.enum(BRAND_AI_FIELDS))
+    .default([])
+    .transform((values) => [...new Set(values)]),
 };
 export const brandProfileSchema = z.object({ ...base, ...brandFields });
 export type BrandProfile = z.output<typeof brandProfileSchema>;

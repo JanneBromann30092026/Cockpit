@@ -3,6 +3,7 @@ import { VaultLockedError } from '@/services/crypto/session';
 import { API_KEY_SECRET } from './config';
 import type { ContractQuestionRequest } from '@/data/prompts/contractQuestion';
 import type { DaySummaryRequest } from '@/data/prompts/daySummary';
+import type { BrandProfileRequest, BrandWriteRequest } from '@/data/prompts/brand';
 import type {
   LibraryKeyPointsRequest,
   LibraryListRequest,
@@ -13,6 +14,8 @@ import {
   AiError,
   type AiCallOptions,
   type AiProvider,
+  type BrandProfileResult,
+  type BrandWriteResult,
   type ConnectionTestResult,
   type ContractAnswerResult,
   type ContractExtractRequest,
@@ -152,6 +155,26 @@ export async function libraryKeyPointsWithAi(
 ): Promise<LibraryKeyPointsResult> {
   const provider = await getAiProvider(config);
   return provider.libraryKeyPoints(input, options);
+}
+
+/** Brand profile from the interview (sends the answers – only on tap). */
+export async function brandProfileWithAi(
+  config: AiConfig,
+  input: BrandProfileRequest,
+  options?: AiCallOptions,
+): Promise<BrandProfileResult> {
+  const provider = await getAiProvider(config);
+  return provider.brandProfile(input, options);
+}
+
+/** A text in the profile's voice (sends brief and profile – only on tap). */
+export async function brandWriteWithAi(
+  config: AiConfig,
+  input: BrandWriteRequest,
+  options?: AiCallOptions,
+): Promise<BrandWriteResult> {
+  const provider = await getAiProvider(config);
+  return provider.brandWrite(input, options);
 }
 
 /** Checks key, network and model (no tokens are generated, so it costs nothing). */

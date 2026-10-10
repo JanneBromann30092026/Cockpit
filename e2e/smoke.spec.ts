@@ -51,7 +51,7 @@ test('navigation switches pages', async ({ page }) => {
     ['Verträge', 'Noch keine Verträge'],
     ['Reviews', 'Noch keine Reviews'],
     ['Bibliothek', 'Deine Bibliothek ist noch leer'],
-    ['Marke', 'Kommt in Schritt 10'],
+    ['Marke', 'Dein Markenprofil'],
     ['Einstellungen', 'Darstellung'],
     ['Heute', 'Termine und Mails einbinden'],
   ] as const;
