@@ -103,7 +103,7 @@ test('requests persistent storage at startup and shows the system status', async
     });
   });
   await openApp(page, '/settings');
-  await expect(page.getByTestId('app-version')).toHaveText('0.1.0');
+  await expect(page.getByTestId('app-version')).toHaveText('1.0.0');
   await expect(page.getByTestId('build-time')).not.toBeEmpty();
   await expect(page.getByTestId('database-status')).toHaveText('Bereit');
   await expect(page.getByTestId('persisted')).toHaveText(/^(Ja|Nein)$/);

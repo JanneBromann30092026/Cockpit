@@ -111,7 +111,7 @@ Touch-first (iPad), wie Kompass:
 - [x] 9 Lebensbibliothek (Einträge, Nachtragen, Suche, Fragen mit Quelle)
 - [x] 10 Markenprofil & Brand-Kit (Interview, Design System, „Damit bauen“)
 - [x] 11 Backups, Export & Import
-- [ ] 12 Feinschliff & Installation
+- [x] 12 Feinschliff & Installation
 
 ## Entscheidungen & Notizen
 - Entstehung: Guide „5 Dinge, die du an einem freien Wochenende mit Claude baust“ (gptmarlon.com). Statt Claude + Notion eine eigene PWA, weil alles in einer App auf dem Homescreen liegen soll, mit Push-Mitteilungen. Notion entfällt (Notion-API erlaubt keinen direkten Zugriff aus dem Browser). Geplante Aufgaben aus dem Guide (Morgen-Briefing, Tages-/Wochen-Review) werden zu Push-Erinnerungen + Auswertung beim Öffnen, weil Web-Apps auf dem iPad nicht im Hintergrund laufen.
@@ -223,3 +223,9 @@ Touch-first (iPad), wie Kompass:
   - Sichern in zwei Tipps („Backup erstellen“ → „Sichern“), weil die Teilen-Funktion des iPad eine frische Geste braucht; Fallback Download. Erst danach gilt `lastBackupAt`.
   - Erinnerung: Einstellung `backupReminderDays` (Nie/7/14/30, Standard 14); „Heute“ zeigt „Zeit für ein Backup“, sobald Daten da sind und das letzte Backup älter ist (bzw. keins existiert); Tipp springt zu `/settings#backup`.
   - Tests: Unit (Format, Base64, Fehlerarten, Erinnerung; Export ohne Klartext/Secrets, Wiederherstellen mit anderem Passwort inkl. Original, Ergänzen/Ersetzen, beschädigte Zeile). E2E: Backup → zweiter Kontext mit anderem Passwort → falsches/richtiges Passwort → Daten und Original da, Key nicht, nach Sperren lesbar; Ergänzen/Ersetzen; Erinnerung in „Heute“.
+- Schritt 12 (Feinschliff & Installation):
+  - Installation: Im Safari-Tab zeigt die Ersteinrichtung „Erst zum Home-Bildschirm hinzufügen“ (Safari-Tab und Homescreen-App haben **getrennte Daten**), „Heute“ die Karte „Cockpit auf den Home-Bildschirm“ mit drei Schritten (ausblendbar, Einstellung `installHintDismissed`). In der Homescreen-App erscheint nichts davon. Ersteinrichtung nennt außerdem „Backup einspielen“ für ein neues iPad. README mit allen Einrichtungsschritten.
+  - Automatische Prüfung (e2e/polish.spec.ts) auf allen Seiten inkl. Detailseiten, Reviews, Interview und Entwicklerbereich mit Demo-Daten: jede sichtbare Bedienfläche ≥ 44×44 px (Layout-Größe, Fließtext-Links ausgenommen), kein seitliches Scrollen – auch in Split View (500 px). Gefunden und behoben: Tagesleiste im Wochen-Review (38 px breit → reicht in den Kartenrand), TagInput (Chips, Entfernen, Vorschläge, Feld 36–40 → 44 px).
+  - Screenshots laufen als Homescreen-App (`navigator.standalone`), eigene Aufnahmen `setup-browser-*` und `today-install-*` im Safari-Tab.
+  - Demo-Reviews korrigiert: Tages-Reviews bis gestern und immer über die gerade offene Woche (mindestens fünf), Wochen-Review der Woche davor – vorher war an Wochentagen der offene Wochen-Review schon „erledigt“.
+  - Version 1.0.0.

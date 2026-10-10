@@ -391,12 +391,22 @@ async function createDemoData(page: Page) {
   await section.getByTestId('dev-demo-count').filter({ hasText: '9 Demo-Einträge' }).waitFor();
   await section.getByTestId('dev-demo-documents').click();
   await section.getByTestId('dev-demo-count').filter({ hasText: '15 Demo-Einträge' }).waitFor();
+  // The number of demo reviews depends on the weekday.
   await section.getByTestId('dev-demo-reviews').click();
-  await section.getByTestId('dev-demo-count').filter({ hasText: '21 Demo-Einträge' }).waitFor();
+  await section.getByTestId('dev-demo-count').filter({ hasNotText: /^15 / }).waitFor();
+  const count = async () =>
+    Number.parseInt((await section.getByTestId('dev-demo-count').innerText()) || '0', 10);
+  const reviews = await count();
   await section.getByTestId('dev-demo-library').click();
-  await section.getByTestId('dev-demo-count').filter({ hasText: '30 Demo-Einträge' }).waitFor();
+  await section
+    .getByTestId('dev-demo-count')
+    .filter({ hasText: `${reviews + 9} Demo-Einträge` })
+    .waitFor();
   await section.getByTestId('dev-demo-brand').click();
-  await section.getByTestId('dev-demo-count').filter({ hasText: '31 Demo-Einträge' }).waitFor();
+  await section
+    .getByTestId('dev-demo-count')
+    .filter({ hasText: `${reviews + 10} Demo-Einträge` })
+    .waitFor();
 }
 
 /** Demo profile for a filtered run (SHOTS=brand) that skipped the earlier shots. */
@@ -902,6 +912,7 @@ async function captureScrolled(page: Page, name: string, variant: string) {
  */
 async function captureToday(variant: { name: string; options: BrowserContextOptions }) {
   const context = await browser.newContext({ ...variant.options, serviceWorkers: 'block' });
+  await context.addInitScript(standaloneScript);
   const page = await context.newPage();
   await page.clock.setFixedTime(new Date('2026-10-05T10:20:00+02:00'));
   await mockAnthropic(page);
@@ -924,6 +935,27 @@ async function captureToday(variant: { name: string; options: BrowserContextOpti
   await page.getByTestId('overview-source').filter({ hasText: '(Claude)' }).waitFor();
   await page.waitForTimeout(900);
   await capture(page, `today-claude-${variant.name}`);
+  await context.close();
+}
+
+/** Runs as the home screen app (like on the iPad); without it the install hints show. */
+function standaloneScript() {
+  Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true, configurable: true });
+}
+
+/** Safari tab: the setup hint and the install card in "Heute". */
+async function captureInstall(variant: { name: string; options: BrowserContextOptions }) {
+  const context = await browser.newContext({ ...variant.options, serviceWorkers: 'block' });
+  const page = await context.newPage();
+  await page.goto(PREVIEW_URL, { waitUntil: 'networkidle' });
+  await page.getByTestId('setup-browser-hint').waitFor();
+  await page.waitForTimeout(600);
+  await capture(page, `setup-browser-${variant.name}`);
+  await quickSetup(page);
+  await page.goto(`${PREVIEW_URL}#/today`);
+  await page.getByTestId('install-card').waitFor();
+  await page.waitForTimeout(700);
+  await capture(page, `today-install-${variant.name}`);
   await context.close();
 }
 
@@ -1019,6 +1051,7 @@ try {
       // Keep screenshots free of the "offline ready" toast.
       serviceWorkers: 'block',
     });
+    await context.addInitScript(standaloneScript);
     await context.addInitScript(simulatedKeyboardScript);
     await context.addInitScript(fakeSpeechScript);
     const page = await context.newPage();
@@ -1066,6 +1099,9 @@ try {
     if (!split && (!ONLY || ONLY.startsWith('lock'))) await captureUnlock(page, variant.name);
     await context.close();
     if (!ONLY || ONLY.startsWith('today')) await captureToday(variant);
+    if (!ONLY || ONLY.startsWith('today-install') || ONLY.startsWith('setup-browser')) {
+      await captureInstall(variant);
+    }
     if (!ONLY || 'settings-push'.startsWith(ONLY) || ONLY.startsWith('settings-push')) {
       await capturePush(variant);
     }

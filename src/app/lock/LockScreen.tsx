@@ -230,6 +230,7 @@ export function LockScreen() {
   const lockReason = useVault((s) => s.lockReason);
   const devMode = useSettings((s) => s.devMode);
   const database = useAppStatus((s) => s.database);
+  const standalone = useAppStatus((s) => s.standalone);
   const reduced = useReducedMotion();
   const keyboardInset = useKeyboardInset();
   const { scope, shake } = useShake();
@@ -308,6 +309,16 @@ export function LockScreen() {
                 {setup ? <SetupForm onError={onError} /> : <UnlockForm onError={onError} />}
               </Surface>
             </motion.div>
+            {setup && (
+              <div className="flex flex-col gap-2 px-2 text-center text-sm text-fg-muted">
+                {!standalone && (
+                  <p className="text-signal-fg" data-testid="setup-browser-hint">
+                    {t.browserHint}
+                  </p>
+                )}
+                <p data-testid="setup-restore-hint">{t.restoreHint}</p>
+              </div>
+            )}
             {devMode && (
               <p className="text-center text-sm text-fg-muted" data-testid="dev-password-hint">
                 {t.devHint(E2E_TEST_PASSWORD)}
