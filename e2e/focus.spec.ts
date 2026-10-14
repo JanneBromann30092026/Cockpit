@@ -89,6 +89,16 @@ async function mockGoogle(context: BrowserContext, grantWrite = true): Promise<M
       headers: { location: `${url.searchParams.get('redirect_uri')}#${fragment.toString()}` },
     });
   });
+  // "Heute" reloads after writing (Gmail too): never let a test reach the real Google.
+  await context.route('https://gmail.googleapis.com/**', (route: Route) =>
+    route.request().method() === 'OPTIONS'
+      ? route.fulfill({ status: 204, headers: CORS })
+      : route.fulfill({
+          status: 200,
+          headers: { ...CORS, 'content-type': 'application/json' },
+          body: JSON.stringify({ messages: [] }),
+        }),
+  );
   await context.route('https://www.googleapis.com/**', async (route: Route) => {
     const request = route.request();
     if (request.method() === 'OPTIONS') {
@@ -157,8 +167,6 @@ test('spoken wish → focus blocks in free time → written into Google Calendar
   page,
   context,
 }) => {
-  // Many steps (setup, planning, writing, planning again, removing): slower on CI runners.
-  test.setTimeout(90_000);
   const mock = await mockGoogle(context);
   await openApp(page);
   await speak(page, SPOKEN);

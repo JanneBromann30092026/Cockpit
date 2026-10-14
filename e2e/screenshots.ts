@@ -1013,6 +1013,16 @@ async function captureFocus(variant: { name: string; options: BrowserContextOpti
       headers: { location: `${url.searchParams.get('redirect_uri')}#${fragment.toString()}` },
     });
   });
+  // "Heute" reloads after writing (Gmail too): never reach the real Google.
+  await context.route('https://gmail.googleapis.com/**', (route) =>
+    route.request().method() === 'OPTIONS'
+      ? route.fulfill({ status: 204, headers: cors })
+      : route.fulfill({
+          status: 200,
+          headers: { ...cors, 'content-type': 'application/json' },
+          body: JSON.stringify({ messages: [] }),
+        }),
+  );
   await context.route('https://www.googleapis.com/**', (route) => {
     if (route.request().method() === 'OPTIONS')
       return route.fulfill({ status: 204, headers: cors });
