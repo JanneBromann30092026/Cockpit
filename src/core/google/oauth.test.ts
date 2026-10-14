@@ -2,13 +2,15 @@ import { describe, expect, it } from 'vitest';
 import {
   buildAuthUrl,
   GOOGLE_CLIENT_ID_PATTERN,
+  canWriteCalendar,
+  CALENDAR_WRITE_SCOPE,
   GOOGLE_SCOPES,
   missingScopes,
   parseOAuthFragment,
 } from './oauth';
 
 describe('Google OAuth', () => {
-  it('builds the authorization URL for the token flow with read-only scopes', () => {
+  it('builds the authorization URL: read scopes plus creating calendar events', () => {
     const url = new URL(
       buildAuthUrl({
         clientId: '123-abc.apps.googleusercontent.com',
@@ -21,11 +23,19 @@ describe('Google OAuth', () => {
       client_id: '123-abc.apps.googleusercontent.com',
       redirect_uri: 'https://example.github.io/Cockpit/oauth.html',
       response_type: 'token',
-      scope: GOOGLE_SCOPES.join(' '),
+      scope: [...GOOGLE_SCOPES, CALENDAR_WRITE_SCOPE].join(' '),
       include_granted_scopes: 'true',
       state: 'xyz',
     });
     expect(GOOGLE_SCOPES.every((scope) => scope.endsWith('.readonly'))).toBe(true);
+    // Writing is limited to events (no calendar settings, no mail).
+    expect(CALENDAR_WRITE_SCOPE).toBe('https://www.googleapis.com/auth/calendar.events');
+  });
+
+  it('writing is optional: without it the connection still works', () => {
+    expect(missingScopes([...GOOGLE_SCOPES])).toEqual([]);
+    expect(canWriteCalendar([...GOOGLE_SCOPES])).toBe(false);
+    expect(canWriteCalendar([...GOOGLE_SCOPES, CALENDAR_WRITE_SCOPE])).toBe(true);
   });
 
   it('reads a token, an error or nothing from the fragment', () => {

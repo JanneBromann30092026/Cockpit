@@ -6,16 +6,17 @@ import { settingsRepo } from '../repositories';
 import { resetDb } from './testDb';
 
 describe('database schema', () => {
-  it('opens version 3 under its own name with all tables', async () => {
+  it('opens version 4 under its own name with all tables', async () => {
     expect(await openDatabase()).toEqual({ ok: true });
     expect(db.name).toBe(DB_NAME);
     expect(DB_NAME).toBe('cockpit');
-    expect(db.verno).toBe(3);
+    expect(db.verno).toBe(4);
     expect(db.tables.map((table) => table.name).sort()).toEqual(
       [
         'brand',
         'documents',
         'files',
+        'focus',
         'library',
         'meta',
         'reviews',
@@ -46,7 +47,7 @@ describe('database schema', () => {
     v1.close();
     const upgraded = new CockpitDb(name);
     expect(await openDatabase(upgraded)).toEqual({ ok: true });
-    expect(upgraded.verno).toBe(3);
+    expect(upgraded.verno).toBe(4);
     expect(await upgraded.settings.get('theme')).toEqual({ key: 'theme', value: 'dark' });
     expect(await upgraded.tasks.count()).toBe(0);
     upgraded.close();
@@ -62,7 +63,7 @@ describe('database schema', () => {
     v2.close();
     const upgraded = new CockpitDb(name);
     expect(await openDatabase(upgraded)).toEqual({ ok: true });
-    expect(upgraded.verno).toBe(3);
+    expect(upgraded.verno).toBe(4);
     expect(await upgraded.tasks.count()).toBe(1);
     expect(await upgraded.files.count()).toBe(0);
     upgraded.close();

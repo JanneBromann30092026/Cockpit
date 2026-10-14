@@ -5,11 +5,20 @@
 
 export const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 
-/** Read-only access to Calendar and Gmail (nothing else is ever requested). */
+/** Read access to Calendar and Gmail – required for "Heute". */
 export const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/calendar.readonly',
   'https://www.googleapis.com/auth/gmail.readonly',
 ] as const;
+
+/**
+ * Creating and removing events (focus blocks). Optional: without it everything else works,
+ * the focus planner asks to connect again. Never access to mail sending or other data.
+ */
+export const CALENDAR_WRITE_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+
+/** Everything Cockpit asks for when connecting. */
+export const REQUESTED_SCOPES = [...GOOGLE_SCOPES, CALENDAR_WRITE_SCOPE] as const;
 
 /** OAuth client IDs of type "Web application", e.g. 1234-abc.apps.googleusercontent.com. */
 export const GOOGLE_CLIENT_ID_PATTERN = /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/;
@@ -25,7 +34,7 @@ export function buildAuthUrl({
   clientId,
   redirectUri,
   state,
-  scopes = GOOGLE_SCOPES,
+  scopes = REQUESTED_SCOPES,
 }: AuthUrlInput): string {
   const params = new URLSearchParams({
     client_id: clientId,
@@ -63,7 +72,11 @@ export function parseOAuthFragment(fragment: string): OAuthResult | null {
   };
 }
 
-/** Scopes the user did not grant (Google lets people untick single permissions). */
+/** Required scopes the user did not grant (Google lets people untick single permissions). */
 export function missingScopes(granted: readonly string[]): string[] {
   return GOOGLE_SCOPES.filter((scope) => !granted.includes(scope));
+}
+
+export function canWriteCalendar(granted: readonly string[]): boolean {
+  return granted.includes(CALENDAR_WRITE_SCOPE);
 }

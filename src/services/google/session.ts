@@ -14,12 +14,15 @@ interface GoogleSessionState {
   expiresAt: number | null;
   /** Last connection problem (shown in the settings until the next attempt). */
   error: GoogleErrorCode | null;
+  /** Granted scopes of the current token (not secret; decides whether writing is allowed). */
+  scopes: string[];
 }
 
 export const useGoogleSession = create<GoogleSessionState>(() => ({
   status: 'disconnected',
   expiresAt: null,
   error: null,
+  scopes: [],
 }));
 
 /** A token is treated as expired a minute early, so requests do not fail mid-way. */
@@ -27,12 +30,18 @@ const EXPIRY_MARGIN_MS = 60_000;
 
 let accessToken: string | null = null;
 
-export function setGoogleToken(token: string, expiresInSeconds: number, now = Date.now()): void {
+export function setGoogleToken(
+  token: string,
+  expiresInSeconds: number,
+  now = Date.now(),
+  scopes: string[] = [],
+): void {
   accessToken = token;
   useGoogleSession.setState({
     status: 'connected',
     expiresAt: now + expiresInSeconds * 1000,
     error: null,
+    scopes,
   });
 }
 
@@ -49,7 +58,7 @@ export function currentGoogleToken(now = Date.now()): string | null {
 
 export function clearGoogleToken(error: GoogleErrorCode | null = null): void {
   accessToken = null;
-  useGoogleSession.setState({ status: 'disconnected', expiresAt: null, error });
+  useGoogleSession.setState({ status: 'disconnected', expiresAt: null, error, scopes: [] });
 }
 
 export function setGoogleConnecting(): void {

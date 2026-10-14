@@ -29,7 +29,7 @@ const errorBodySchema = z.object({
 const DISABLED_REASONS = new Set(['accessNotConfigured', 'SERVICE_DISABLED']);
 const SCOPE_REASONS = new Set(['insufficientPermissions', 'ACCESS_TOKEN_SCOPE_INSUFFICIENT']);
 
-async function errorFor(response: Response): Promise<GoogleError> {
+async function errorFor(response: Response, writing = false): Promise<GoogleError> {
   const { status } = response;
   if (status === 401) {
     clearGoogleToken('EXPIRED');
@@ -48,6 +48,8 @@ async function errorFor(response: Response): Promise<GoogleError> {
       return new GoogleError('API_DISABLED', 'api not enabled', status);
     }
     if (reasons.some((reason) => reason && SCOPE_REASONS.has(reason))) {
+      // Writing is optional: reading still works with this token.
+      if (writing) return new GoogleError('NO_WRITE_ACCESS', 'no write access', status);
       clearGoogleToken('MISSING_SCOPES');
       return new GoogleError('MISSING_SCOPES', 'missing scopes', status);
     }
@@ -77,6 +79,44 @@ export async function googleGet<S extends z.ZodType>(
   }
   if (!response.ok) throw await errorFor(response);
   const parsed = schema.safeParse(await response.json().catch(() => null));
+  if (!parsed.success) throw new GoogleError('INVALID_RESPONSE');
+  return parsed.data;
+}
+
+/** POST (JSON) or DELETE with the session token – only used to create and remove events. */
+export async function googleSend<S extends z.ZodType>(
+  method: 'POST' | 'DELETE',
+  url: string,
+  schema: S,
+  body?: unknown,
+  signal?: AbortSignal,
+): Promise<z.output<S>> {
+  const token = currentGoogleToken();
+  if (!token) throw new GoogleError('NOT_CONNECTED');
+  if (isOffline()) throw new GoogleError('OFFLINE');
+  const timeout = AbortSignal.timeout(TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+    });
+  } catch {
+    throw new GoogleError(isOffline() ? 'OFFLINE' : 'NETWORK');
+  }
+  // An event that is already gone counts as removed.
+  if (method === 'DELETE' && (response.status === 404 || response.status === 410)) {
+    return schema.parse(null);
+  }
+  if (!response.ok) throw await errorFor(response, true);
+  const parsed = schema.safeParse(
+    response.status === 204 ? null : await response.json().catch(() => null),
+  );
   if (!parsed.success) throw new GoogleError('INVALID_RESPONSE');
   return parsed.data;
 }

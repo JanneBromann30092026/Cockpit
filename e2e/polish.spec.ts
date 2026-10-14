@@ -14,6 +14,7 @@ const ROUTES = [
   '/reviews/day/today',
   '/reviews/week/current',
   '/brand/interview',
+  '/focus',
   '/dev/ui',
 ];
 

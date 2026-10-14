@@ -28,6 +28,7 @@ function sample() {
       reviews: [],
       library: [],
       brand: [],
+      focus: [],
     },
     files: [{ id: 'f1', documentId: 'd1', updatedAt: '2026-10-09T17:00:00.000Z', payload }],
   });

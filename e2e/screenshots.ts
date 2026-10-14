@@ -970,6 +970,87 @@ async function captureInstall(variant: { name: string; options: BrowserContextOp
   await context.close();
 }
 
+/**
+ * Spoken wish → focus planner with a fake week (uni mornings, sport twice) at a fixed time
+ * (Monday 7:30). Own context: Google is faked with events for the next days.
+ */
+async function captureFocus(variant: { name: string; options: BrowserContextOptions }) {
+  const context = await browser.newContext({ ...variant.options, serviceWorkers: 'block' });
+  await context.addInitScript(standaloneScript);
+  const page = await context.newPage();
+  const now = new Date('2026-10-12T07:30:00+02:00');
+  await page.clock.setFixedTime(now);
+  const day = (offset: number, time: string) =>
+    `${new Date(now.getTime() + offset * 86_400_000).toISOString().slice(0, 10)}T${time}:00+02:00`;
+  const events = [
+    ...[0, 1, 2, 3, 4].map((offset) => ({
+      id: `uni-${offset}`,
+      start: { dateTime: day(offset, '09:00') },
+      end: { dateTime: day(offset, '13:00') },
+    })),
+    ...[1, 3].map((offset) => ({
+      id: `sport-${offset}`,
+      start: { dateTime: day(offset, '18:00') },
+      end: { dateTime: day(offset, '19:30') },
+    })),
+  ];
+  const cors = {
+    'access-control-allow-origin': '*',
+    'access-control-allow-headers': '*',
+    'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS',
+  };
+  await context.route('https://accounts.google.com/**', (route) => {
+    const url = new URL(route.request().url());
+    const fragment = new URLSearchParams({
+      state: url.searchParams.get('state') ?? '',
+      access_token: 'ya29.screenshot',
+      token_type: 'Bearer',
+      expires_in: '3599',
+      scope: url.searchParams.get('scope') ?? '',
+    });
+    return route.fulfill({
+      status: 302,
+      headers: { location: `${url.searchParams.get('redirect_uri')}#${fragment.toString()}` },
+    });
+  });
+  await context.route('https://www.googleapis.com/**', (route) => {
+    if (route.request().method() === 'OPTIONS')
+      return route.fulfill({ status: 204, headers: cors });
+    const path = new URL(route.request().url()).pathname;
+    const body = path.endsWith('/calendarList')
+      ? { items: [{ id: 'primary', primary: true, selected: true }] }
+      : { items: events };
+    return route.fulfill({
+      status: 200,
+      headers: { ...cors, 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  });
+  await quickSetup(page);
+  await page.goto(`${PREVIEW_URL}#/today`);
+  await page.getByTestId('command-open').click();
+  await page
+    .getByTestId('command-text')
+    .fill(
+      'Ich hätte gern Fokusblöcke. Sport ist schon eingetragen, meine Uni ist schon eingetragen. Was noch fehlt, ist Zeit fürs Nacharbeiten, Vorarbeiten von der Uni und Zeit für Instagram.',
+    );
+  await page.getByTestId('command-understand').click();
+  await page.getByTestId('command-result').waitFor();
+  await page.waitForTimeout(700);
+  await capture(page, `command-${variant.name}`);
+  await page.getByTestId('command-run').click();
+  await page.getByTestId('focus-page').waitFor();
+  const popup = context.waitForEvent('page');
+  await page.getByTestId('focus-connect').click();
+  await popup;
+  await page.getByTestId('focus-find').click();
+  await page.getByTestId('focus-block').first().waitFor();
+  await page.waitForTimeout(900);
+  await capture(page, `focus-${variant.name}`);
+  await captureScrolled(page, 'focus', variant.name);
+  await context.close();
+}
+
 /** Fake push subscription (Chromium in the cloud has no push service). */
 function fakePushScript() {
   let permission: NotificationPermission = 'default';
@@ -1110,6 +1191,9 @@ try {
     if (!split && (!ONLY || ONLY.startsWith('lock'))) await captureUnlock(page, variant.name);
     await context.close();
     if (!ONLY || ONLY.startsWith('today')) await captureToday(variant);
+    if (!ONLY || ONLY.startsWith('focus') || ONLY.startsWith('command')) {
+      await captureFocus(variant);
+    }
     if (!ONLY || ONLY.startsWith('today-install') || ONLY.startsWith('setup-browser')) {
       await captureInstall(variant);
     }

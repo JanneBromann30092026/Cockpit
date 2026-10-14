@@ -2,7 +2,14 @@ export { metaRepo, VaultExistsError } from './metaRepo';
 export { secretsRepo } from './secretsRepo';
 export { settingsRepo } from './settingsRepo';
 
-export { brandRepo, documentsRepo, libraryRepo, reviewsRepo, tasksRepo } from './records';
+export {
+  brandRepo,
+  documentsRepo,
+  focusRepo,
+  libraryRepo,
+  reviewsRepo,
+  tasksRepo,
+} from './records';
 export { demoActions, taskActions, type TaskInput, type TaskPatch } from './taskActions';
 export {
   documentActions,
@@ -15,4 +22,5 @@ export {
 export { reviewActions, type ChangeTasks, type ReviewDraft } from './reviewActions';
 export { libraryActions, type LibraryInput, type LibraryPatch } from './libraryActions';
 export { brandActions, currentBrand, ruleDesign, type BrandPatch } from './brandActions';
+export { currentFocus, focusActions, newActivity, type FocusPatch } from './focusActions';
 export { backupRepo, NoVaultError, type RestoreMode, type RestoreResult } from './backupRepo';

@@ -169,7 +169,10 @@ test('sign-in in a window, access test, disconnect', async ({ page, context }) =
   const request = authRequests[0];
   expect(request?.searchParams.get('client_id')).toBe(CLIENT_ID);
   expect(request?.searchParams.get('response_type')).toBe('token');
-  expect(request?.searchParams.get('scope')).toBe(SCOPES.join(' '));
+  // Read Calendar and Gmail, plus creating events (focus blocks) – nothing else.
+  expect(request?.searchParams.get('scope')).toBe(
+    [...SCOPES, 'https://www.googleapis.com/auth/calendar.events'].join(' '),
+  );
   expect(request?.searchParams.get('redirect_uri')).toBe(
     'http://localhost:4173/Cockpit/oauth.html',
   );
@@ -205,7 +208,7 @@ test('refused or incomplete permissions are explained', async ({ page, context }
   );
   await connect.click();
   await expect(section(page).getByTestId('google-error')).toContainText(
-    'Bitte beide Berechtigungen erlauben',
+    'Bitte die Berechtigungen „Kalender“ und „Gmail lesen“ erlauben',
   );
   await expect(section(page).getByTestId('google-status')).toHaveText('Nicht verbunden');
 });

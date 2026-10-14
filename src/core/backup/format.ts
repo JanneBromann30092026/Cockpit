@@ -19,7 +19,14 @@ import {
 
 export const BACKUP_FORMAT = 'cockpit-backup';
 export const BACKUP_VERSION = 1;
-export const BACKUP_TABLES = ['tasks', 'documents', 'reviews', 'library', 'brand'] as const;
+export const BACKUP_TABLES = [
+  'tasks',
+  'documents',
+  'reviews',
+  'library',
+  'brand',
+  'focus',
+] as const;
 export type BackupTable = (typeof BACKUP_TABLES)[number];
 
 export function toBase64(data: Uint8Array): string {

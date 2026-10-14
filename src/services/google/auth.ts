@@ -53,7 +53,7 @@ function applyResult(result: OAuthResult): void {
     setGoogleError('MISSING_SCOPES');
     return;
   }
-  setGoogleToken(result.accessToken, result.expiresIn);
+  setGoogleToken(result.accessToken, result.expiresIn, Date.now(), result.scopes);
 }
 
 function onPopupResult(result: OAuthResult): void {
