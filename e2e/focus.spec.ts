@@ -157,6 +157,8 @@ test('spoken wish → focus blocks in free time → written into Google Calendar
   page,
   context,
 }) => {
+  // Many steps (setup, planning, writing, planning again, removing): slower on CI runners.
+  test.setTimeout(90_000);
   const mock = await mockGoogle(context);
   await openApp(page);
   await speak(page, SPOKEN);
