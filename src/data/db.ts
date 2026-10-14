@@ -5,7 +5,7 @@ import type { EncryptedRow, FileRow, MetaEntry, SecretRow, Setting } from './typ
 export const DB_NAME = 'cockpit';
 
 /** Tables with personal data (decrypted into the in-memory store after unlocking). */
-export const DATA_TABLES = ['tasks', 'documents', 'reviews', 'library', 'brand'] as const;
+export const DATA_TABLES = ['tasks', 'documents', 'reviews', 'library', 'brand', 'focus'] as const;
 export type DataTable = (typeof DATA_TABLES)[number];
 
 export class CockpitDb extends Dexie {
@@ -16,6 +16,7 @@ export class CockpitDb extends Dexie {
   reviews!: EntityTable<EncryptedRow, 'id'>;
   library!: EntityTable<EncryptedRow, 'id'>;
   brand!: EntityTable<EncryptedRow, 'id'>;
+  focus!: EntityTable<EncryptedRow, 'id'>;
   secrets!: EntityTable<SecretRow, 'key'>;
   files!: EntityTable<FileRow, 'id'>;
 
@@ -51,6 +52,11 @@ export class CockpitDb extends Dexie {
     // migrate. Indexed by contract, so deleting a contract removes its files.
     this.version(3).stores({
       files: 'id, documentId, updatedAt',
+    });
+
+    // Focus blocks: the encrypted planning profile (activities, hours) – a new table.
+    this.version(4).stores({
+      focus: 'id, updatedAt',
     });
   }
 }

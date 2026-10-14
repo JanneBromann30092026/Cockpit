@@ -5,6 +5,7 @@
  * fields need no database migration.
  */
 import { z } from 'zod';
+import { DAY_PARTS } from '@/core/focus/plan';
 import {
   BRAND_AI_FIELDS,
   BRAND_COLOR_ROLES,
@@ -255,6 +256,42 @@ export const brandFields = {
 export const brandProfileSchema = z.object({ ...base, ...brandFields });
 export type BrandProfile = z.output<typeof brandProfileSchema>;
 export const brandInputSchema = z.object(brandFields);
+
+// --- Focus blocks ---------------------------------------------------------------
+
+export const focusActivitySchema = z.object({
+  id: z.uuid(),
+  name: z.string().trim().min(1).max(LIMITS.name),
+  /** Wanted minutes in the next seven days. */
+  minutesPerWeek: z
+    .int()
+    .min(15)
+    .max(40 * 60),
+  blockMinutes: z.int().min(30).max(240),
+  dayPart: z.enum(DAY_PARTS),
+});
+export type FocusActivityRecord = z.output<typeof focusActivitySchema>;
+
+const clock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+
+export const focusFields = {
+  activities: z.array(focusActivitySchema).max(LIMITS.items).default([]),
+  dayStart: clock.default('08:00'),
+  dayEnd: clock.default('20:00'),
+  weekdays: z
+    .array(z.int().min(0).max(6))
+    .default([0, 1, 2, 3, 4, 5, 6])
+    .transform((days) => [...new Set(days)].sort()),
+  bufferMinutes: z.int().min(0).max(60).default(15),
+  maxMinutesPerDay: z
+    .int()
+    .min(30)
+    .max(16 * 60)
+    .default(240),
+};
+export const focusProfileSchema = z.object({ ...base, ...focusFields });
+export type FocusProfile = z.output<typeof focusProfileSchema>;
+export const focusInputSchema = z.object(focusFields);
 
 // --- Secrets (step 3) ----------------------------------------------------------
 

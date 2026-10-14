@@ -4,3 +4,10 @@ export { fetchTodayEvents, fetchUnreadMails, gmailThreadUrl, MAX_MAILS } from '.
 export { appOrigin, GOOGLE_CLIENT_ID, oauthRedirectUri } from './config';
 export { GoogleError, type GoogleErrorCode } from './errors';
 export { currentGoogleToken, useGoogleSession, type GoogleStatus } from './session';
+export {
+  createFocusBlocks,
+  deleteFocusBlocks,
+  loadCalendarForFocus,
+  type FocusBlockEvent,
+  type NewFocusBlock,
+} from './focus';

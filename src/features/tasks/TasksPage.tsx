@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
-import { ChevronDown, Plus } from 'lucide-react';
+import { CalendarClock, ChevronDown, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router';
 import { Button, cn, EmptyState } from '@/components/ui';
 import { useHotkeys } from '@/app/hooks/useHotkeys';
 import { useLocalDate } from '@/app/hooks/useLocalDate';
@@ -46,6 +47,7 @@ function TaskList({ tasks, today }: { tasks: Task[]; today: string }) {
 
 /** All tasks by due date: overdue, today, tomorrow, next 7 days, later, without date. */
 export function TasksPage() {
+  const navigate = useNavigate();
   const today = useLocalDate();
   const tasks = useTasks();
   const quickInput = useRef<HTMLInputElement>(null);
@@ -80,15 +82,27 @@ export function TasksPage() {
     <Page
       title={t.title}
       actions={
-        <Button
-          size="sm"
-          icon={Plus}
-          onClick={() => setAdding(true)}
-          aria-label={t.add}
-          data-testid="tasks-add"
-        >
-          <span className="hidden sm:inline">{t.add}</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={CalendarClock}
+            onClick={() => void navigate('/focus')}
+            aria-label={de.focus.title}
+            data-testid="tasks-focus"
+          >
+            <span className="hidden sm:inline">{de.focus.title}</span>
+          </Button>
+          <Button
+            size="sm"
+            icon={Plus}
+            onClick={() => setAdding(true)}
+            aria-label={t.add}
+            data-testid="tasks-add"
+          >
+            <span className="hidden sm:inline">{t.add}</span>
+          </Button>
+        </div>
       }
     >
       <div className="flex flex-col gap-6" data-testid="tasks-page">

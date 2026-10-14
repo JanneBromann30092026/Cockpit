@@ -9,6 +9,7 @@ import {
   LogIn,
   Mail as MailIcon,
   MapPin,
+  Mic,
   Plus,
   RefreshCw,
   Sparkles,
@@ -31,6 +32,7 @@ import { useDocuments } from '@/features/documents/useDocuments';
 import { ReviewPromptCard } from '@/features/reviews/ReviewPromptCard';
 import { BackupPromptCard } from './BackupPromptCard';
 import { InstallCard } from './InstallCard';
+import { CommandPanel } from '@/features/commands/CommandPanel';
 import { useGoogleClientId, useSettings } from '@/features/settings/settingsStore';
 import { TaskEditor } from '@/features/tasks/TaskEditor';
 import { TaskRow } from '@/features/tasks/TaskRow';
@@ -647,25 +649,39 @@ export function TodayPage() {
   ]);
 
   const showData = demo || connected || hasData;
+  const [speaking, setSpeaking] = useState(false);
 
   return (
     <Page
       title={de.nav.today}
       actions={
-        canRefresh && (
+        <div className="flex items-center gap-2">
           <Button
             size="sm"
             variant="secondary"
-            icon={RefreshCw}
-            loading={loading}
-            onClick={() => void refreshToday()}
-            data-testid="today-refresh"
+            icon={Mic}
+            onClick={() => setSpeaking(true)}
+            aria-label={de.commands.open}
+            data-testid="command-open"
           >
-            {loading ? t.refreshing : t.refresh}
+            <span className="hidden sm:inline">{de.commands.open}</span>
           </Button>
-        )
+          {canRefresh && (
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={RefreshCw}
+              loading={loading}
+              onClick={() => void refreshToday()}
+              data-testid="today-refresh"
+            >
+              {loading ? t.refreshing : t.refresh}
+            </Button>
+          )}
+        </div>
       }
     >
+      <CommandPanel open={speaking} onClose={() => setSpeaking(false)} />
       <div className="flex flex-col gap-6">
         <div className="-mt-1 flex flex-wrap items-center gap-x-3 gap-y-2 px-1">
           <p className="text-base text-fg-secondary" data-testid="today-date">

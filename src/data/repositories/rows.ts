@@ -9,6 +9,7 @@ import { requireSessionKey } from '@/services/crypto/session';
 import { db, DATA_TABLES, type DataTable } from '../db';
 import {
   brandProfileSchema,
+  focusProfileSchema,
   documentSchema,
   libraryEntrySchema,
   reviewSchema,
@@ -23,6 +24,7 @@ const SCHEMAS: { [T in DataTable]: z.ZodType<DataRecords[T]> } = {
   reviews: reviewSchema,
   library: libraryEntrySchema,
   brand: brandProfileSchema,
+  focus: focusProfileSchema,
 };
 
 export function recordSchema<T extends DataTable>(table: T): z.ZodType<DataRecords[T]> {
